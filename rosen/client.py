@@ -26,8 +26,9 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
     # set up log
     gcomm_log_f = open(gcomm_log, 'wb')
     # get first packet to send
-    packet = next(packet_gen)
+    # packet = next(packet_gen)
 
+    packet = yield
     while True:
         log.debug(f"Sending packet")
 
@@ -43,7 +44,8 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
                     if data == b'ack':
                         # we received the ack
                         log.debug("ACK received")
-                        packet = next(packet_gen)
+                        # packet = next(packet_gen)
+                        packet = yield
                         break
                     else:
                         gcomm_log_f.write(data)
