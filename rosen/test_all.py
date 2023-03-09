@@ -9,22 +9,17 @@ from datetime import datetime
 import os
 
 def test_axe_parsebuild():
-    # manually build an axe command and parse it
-    # b = axe.build({'cmd':'execute', 'table':'.', 'data':[]})
-    # axe.parse(b)
     b = AXE('execute', 'foobar').build()
-    AXE.parse(b)
+    a = AXE.parse(b)
+    assert a.cmd == 'execute'
+    assert a.data == 'foobar'
 
 def test_icomm_parsebuild():
-    # manually build an icomm packet and parse it
-    # b = icomm.build(
-    #     {'body':{'value':
-    #         {'cmd':'route', 'to':'eduplsb', 'from':'ground', 'payload':b'hello'}
-    #     }}
-    # )
-    # icomm.parse(b)
     b = ICOMM('route', 'ground', 'dcm', AXE('execute', 'foobar')).build()
-    ICOMM.parse(b)
+    i = ICOMM.parse(b)
+    assert i.cmd == 'route'
+    assert type(i.payload) is AXE
+    assert i.payload.cmd == 'execute'
 
 def test_commscript():
     # build a basic ICOMM script
@@ -40,12 +35,6 @@ def test_commscript():
 
 def test_gcomm_parsebuild():
     # manually build a gcomm packet and parse it
-    # b = gcomm.build({
-    #     'cmd':'exec_now', 'filename':'foobar.txt', 'n':0, 'm':100,
-    #     'offset':1234567890, 'addr':'0.0.0.0', 'time':1234567890,
-    #     'err':'this is an error', 'script':b'hello world'
-    # })
-    # gcomm.parse(b)
     i = ICOMM('route', 'ground', 'dcm', AXE('execute', 'foobar'))
     b = GCOMM(
         'exec_now', filename='foobar.txt', n=0, m=100, offset=1234567890,
@@ -93,7 +82,8 @@ def test_gcommscript_helpers(tmpdir):
     assert len(g.script) == 6, "Incorrect GCOMM script length"
 
     g.save('script.pkl')
-    os.remove('script.pkl')
+    g = GCOMMScript.load('script.pkl')
+    assert len(g.script) == 6, "Incorrect GCOMM script length"
 
 def test_handle_time():
     handle_time('2023-01-01')

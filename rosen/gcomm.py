@@ -217,4 +217,9 @@ class GCOMMScript:
             filename (str): file to output to
         """
         with open(filename, 'wb') as f:
-            pickle.dump(self.script, f)
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, 'rb') as f:
+            return pickle.load(f)

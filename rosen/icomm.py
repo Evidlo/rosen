@@ -77,7 +77,7 @@ class ICOMM:
         parsed = icomm.parse(raw_bytes)
         return cls(
             parsed.body.value.cmd, parsed.body.value.to, parsed.body.value.frm,
-            parsed.body.value.payload
+            AXE.parse(parsed.body.value.payload)
         )
 
 
