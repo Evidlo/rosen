@@ -62,20 +62,20 @@ g.save('myscript.pkl')
 
 >>> a = AXE('execute', 'foo_command')
 >>> a
-set(foo_command)
+execute(foo_command)
 >>> a.build()
-b'>.\x00\xabfoo_command'
+b'!.\x00\xabfoo_command'
 >>> AXE.parse(a.build())
-set(foo_command)
+execute(foo_command)
 
 
 >>> i = ICOMM('route', 'ground', 'dcm', a)
 >>> i
-dcm→ground: set(foo_command)
+dcm→ground: execute(foo_command)
 >>> i.build()
-b'\x00\x16\x01\x05\x02>.\x00\xabfoo_commandQ\xff\xad\x9a'
+b'\x00\x16\x01\x05\x02!.\x00\xabfoo_commandQ\xff\xad\x9a'
 >>> ICOMM.parse(i.build())
-dcm→ground: set(foo_command)
+dcm→ground: execute(foo_command)
 ```
 
 ## Executing GCOMM Scripts
