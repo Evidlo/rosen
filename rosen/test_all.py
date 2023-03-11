@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import pytest
+
 from rosen.icomm import ICOMM, ICOMMScript
 from rosen.axe import AXE
 from rosen.gcomm import GCOMM, GCOMMScript
@@ -26,6 +28,11 @@ def test_icomm():
     assert type(i.payload) is AXE
     assert i.payload.cmd == 'execute'
 
+    try:
+        str(i)
+    except Exception:
+        pytest.fail("ICOMM printing failed")
+
 def test_icommscript():
     # build a basic ICOMM script
     i_scr = ICOMMScript()
@@ -37,6 +44,11 @@ def test_icommscript():
     # check size of script and timestamps
     assert len(i_scr.script) == 4, "Incorrect script length"
     assert i_scr.script[1][0] > i_scr.script[0][0]
+
+    try:
+        str(i_scr)
+    except Exception:
+        pytest.fail("ICOMMScript printing failed")
 
 # ----- GCOMM -----
 
@@ -56,7 +68,10 @@ def test_gcomm():
     GCOMM.parse(g.build())
 
     # test string representation
-    str(g)
+    try:
+        str(g)
+    except Exception:
+        pytest.fail("GCOMM printing failed")
 
 def test_gcommscript_commands():
     # build a basic GCOMM script
@@ -85,7 +100,10 @@ def test_gcommscript_commands():
     assert len(g_scr.script) == 16, "Incorrect GCOMM script length"
 
     # test string representation
-    str(g_scr)
+    try:
+        str(g_scr)
+    except Exception:
+        pytest.fail("GCOMMScript printing failed")
 
 def test_gcommscript_helpers(tmpdir):
     # test helper methods on GCOMMScript for uploading/scheduling ICOMMScripts
@@ -104,6 +122,11 @@ def test_gcommscript_helpers(tmpdir):
     g_scr.save('script.pkl')
     g_scr = GCOMMScript.load('script.pkl')
     assert len(g_scr.script) == 6, "Incorrect GCOMM script length"
+
+    try:
+        str(g_scr)
+    except Exception:
+        pytest.fail("GCOMMScript printing failed")
 
 # ----- Common functions -----
 
