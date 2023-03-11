@@ -10,11 +10,13 @@ from rich.table import Table, Column
 from rich.console import Console
 
 from rosen.icomm import ICOMMScript, ICOMM
-from rosen.common import handle_time
+from rosen.common import handle_time, Script, Packet
 
 def bytes2ip(b, *args):
     return '.'.join(map(str, b))
 def ip2bytes(ip, *args):
+    if ip == '':
+        return None
     return bytes(map(int, ip.split('.')))
 
 gcomm_construct = Struct(
@@ -30,7 +32,7 @@ gcomm_construct = Struct(
     "filename" / Default(PaddedString(16, 'ascii'), ''),
     "n" / Default(Int32ub, 0),
     "m" / Default(Int32ub, 0),
-    "addr" / Default(ExprAdapter(Bytes(4), bytes2ip, ip2bytes), '0.0.0.0'),
+    "addr" / ExprAdapter(Default(Bytes(4), ip2bytes('0.0.0.0')), bytes2ip, ip2bytes),
     "time" / Default(Int32ub, 0),
     "errcode" / Default(Int8ub, 0),
     "errstr" / Default(PaddedString(32, 'ascii'), ''),
@@ -39,44 +41,20 @@ gcomm_construct = Struct(
     "packet" / Default(GreedyBytes, b'')
 )
 
-@dataclass
-class GCOMM:
+@dataclass(repr=False)
+class GCOMM(Packet):
     """Class for building/parsing GCOMM packet"""
 
-    # cmd: str
-    # filename: str = ''
-    # n: int = 0
-    # m: int = 0
-    # offset: int = 0
-    # addr: str = None
-    # time: int = 0
-    # errcode: int = 0
-    # errstr: str = ''
-    # packet: ICOMM = None
     cmd: str
     filename: str = ''
     n: int = 0
     m: int = 0
     offset: int = 0
-    addr: str = '0.0.0.0'
+    addr: str = ''
     time: int = 0
     errcode: int = 0
     errstr: str = ''
     packet: ICOMM = None
-
-    def __repr__(self):
-        """String representation of GCOMM"""
-
-        # only show fields changed from default
-        display_fields = [self.cmd]
-        for field in fields(self):
-            if field.name == 'cmd':
-                continue
-            val = getattr(self, field.name)
-            if val != field.default:
-                display_fields.append(f"{field.name}={val}")
-
-        return f"GCOMM({', '.join(display_fields)})"
 
     def build(self):
         """Build bytes for GCOMM packet
@@ -106,7 +84,7 @@ class GCOMM:
         )
 
 
-class GCOMMScript:
+class GCOMMScript(Script):
     """Class which holds many GCOMM objects. GCOMMScripts can be saved to disk for
     later consumption by `rosen run script.pkl` and display as tables when printed"""
 
@@ -119,11 +97,6 @@ class GCOMMScript:
         self.name = name
         # list of bytestrings containing GCOMM commands
         self.script = []
-
-    def __iter__(self):
-        """Allow iterating over GCOMM objects within script"""
-        for g in self.script:
-            yield g
 
     def __repr__(self):
         """Tabular text representation of GCOMM script"""
@@ -145,7 +118,7 @@ class GCOMMScript:
                 g.cmd, g.filename,
                 str(g.n or ''), str(g.m or ''),
                 str(g.offset or ''),
-                g.addr,
+                g.addr if g.addr != GCOMM.addr else '',
                 str(g.time or ''),
                 str(g.errcode or ''), str(g.errstr or ''),
                 g.packet.cmd if g.packet else '',

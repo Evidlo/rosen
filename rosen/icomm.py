@@ -5,13 +5,14 @@ from construct import (
     Mapping, OffsettedEnd, Prefixed, Bytes, CString,
     VarInt, RawCopy, Probe
 )
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from msgpack import packb, unpackb
 from rich.console import Console
 from rich.table import Table
 import binascii
 
 from rosen.axe import AXE
+from rosen.common import Script, Packet
 
 device_map = Mapping(
     Byte,
@@ -49,8 +50,8 @@ icomm_construct = Prefixed(Int16ub, Struct(
     )
 ))
 
-@dataclass
-class ICOMM:
+@dataclass(repr=False)
+class ICOMM(Packet):
     """Class for building/parsing ICOMM packet"""
     cmd: str
     frm: str
@@ -58,30 +59,6 @@ class ICOMM:
     n: int = 0
     m: int = 0
     payload: AXE = None
-
-    # def __init__(self, cmd=None, to=None, frm=None, n=None, m=None, payload=None):
-    #     self.cmd, self.to, self.frm, self.payload=cmd, to, frm, payload
-
-    def __repr__(self):
-        """ICOMM string representation"""
-        # if self.cmd == 'ack':
-        #     p = "ACK"
-        # elif self.cmd == 'nack':
-        #     p = "NACK"
-        # else:
-        #     p = self.payload
-        # return f"{self.frm}→{self.to}: {p}"
-
-        # only show fields changed from default
-        display_fields = [self.cmd]
-        for field in fields(self):
-            if field.name == 'cmd':
-                continue
-            val = getattr(self, field.name)
-            if val != field.default:
-                display_fields.append(f"{field.name}={val}")
-
-        return f"ICOMM({', '.join(display_fields)})"
 
     def build(self):
         """Build bytes for GCOMM packet
@@ -109,7 +86,7 @@ class ICOMM:
 
 # ----- Scripting -----
 
-class ICOMMScript:
+class ICOMMScript(Script):
 
     def __init__(self, name='', offset=0, increment=1):
         """Class for generating ICOMM script sequences
@@ -127,9 +104,6 @@ class ICOMMScript:
         self.increment = increment
         # list of tuples containing (execution_time, icomm_packet)
         self.script = []
-
-    def __len__(self):
-        return len(self.script)
 
     def __repr__(self):
         """Pretty print object as table"""
