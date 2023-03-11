@@ -5,8 +5,10 @@ from construct import (
     Mapping, OffsettedEnd, Prefixed, Bytes, CString,
     VarInt, RawCopy, Probe
 )
+from dataclasses import dataclass
 from msgpack import packb, unpackb
-from pprint import pprint
+from rich.console import Console
+from rich.table import Table
 import binascii
 
 from rosen.axe import AXE
@@ -23,7 +25,7 @@ device_map = Mapping(
     }
 )
 
-icomm = Prefixed(Int16ub, Struct(
+icomm_construct = Prefixed(Int16ub, Struct(
     "body" / RawCopy(Struct(
         "cmd" / Mapping(
             Byte,
@@ -36,6 +38,8 @@ icomm = Prefixed(Int16ub, Struct(
         ),
         "to" / device_map,
         "frm" / device_map,
+        "n" / Int8ub,
+        "m" / Int8ub,
         "payload" / OffsettedEnd(-4, GreedyBytes),
     )),
     "checksum" / Checksum(
@@ -45,21 +49,29 @@ icomm = Prefixed(Int16ub, Struct(
     )
 ))
 
+@dataclass
 class ICOMM:
     """Class for building/parsing ICOMM packet"""
+    cmd: str
+    frm: str
+    to: str
+    n: int
+    m: int
+    payload: AXE
 
-    def __init__(self, cmd=None, to=None, frm='', payload=None):
-        self.cmd, self.to, self.frm, self.payload = cmd, to, frm, payload
+    # def __init__(self, cmd=None, to=None, frm=None, n=None, m=None, payload=None):
+    #     self.cmd, self.to, self.frm, self.payload=cmd, to, frm, payload
 
     def __repr__(self):
-        """ICOMM string represenetation"""
+        """ICOMM string representation"""
         if self.cmd == 'ack':
-            return f"{self.frm}→{self.to}: ACK"
+            p = "ACK"
         elif self.cmd == 'nack':
-            return f"{self.frm}→{self.to}: NACK"
+            p = "NACK"
         else:
-            return f"{self.frm}→{self.to}: {self.payload}"
+            p = self.payload
 
+        return f"{self.frm}→{self.to}: {p}"
 
     def build(self):
         """Build bytes for GCOMM packet
@@ -68,15 +80,19 @@ class ICOMM:
             bytes
         """
         axe_bytes = self.payload.build()
-        return icomm.build({'body':{'value':
-            {'cmd':self.cmd, 'to':self.to, 'frm':self.frm, 'payload':axe_bytes}
+        return icomm_construct.build({'body':{'value':
+            {
+                'cmd':self.cmd, 'to':self.to, 'frm':self.frm, 'n':self.n,
+                'm':self.m, 'payload':axe_bytes
+            }
         }})
 
     @classmethod
     def parse(cls, raw_bytes):
-        parsed = icomm.parse(raw_bytes)
+        parsed = icomm_construct.parse(raw_bytes)
         return cls(
             parsed.body.value.cmd, parsed.body.value.to, parsed.body.value.frm,
+            parsed.body.value.n, parsed.body.value.m,
             AXE.parse(parsed.body.value.payload)
         )
 
@@ -85,13 +101,16 @@ class ICOMM:
 
 class ICOMMScript:
 
-    def __init__(self, offset=0, increment=1):
+    def __init__(self, name='', offset=0, increment=1):
         """Class for generating ICOMM script sequences
 
         Args:
+            name (str): optional name of script
             offset (float): time offset of next ICOMM packet
             increment (float): seconds to increment offset after new command
         """
+        # optional name of the script for printing purposes
+        self.name = name
         # current time offset
         self.offset = offset
         # offset time increment after adding a command
@@ -103,13 +122,23 @@ class ICOMMScript:
         return len(self.script)
 
     def __repr__(self):
-        s = "ICOMMScript"
-        s += f"\n    {'Time Offset':<15}{'From':<15}{'To':<15}"
-        s += f"\n    {'-----------':<15}{'----':<15}"
-        for cmd in self.script:
-            s += f"\n    {cmd[0]:<20}{str(cmd[1].frm):<20}"
+        """Pretty print object as table"""
 
-        return s
+        table = Table(
+            "Time", "From", "To", "Payload",
+            title=f"ICOMMScript: {self.name}",
+        )
+
+        for cmd in self.script:
+            table.add_row(
+                str(cmd[0]), cmd[1].frm, cmd[1].to,
+                str(cmd[1].payload))
+
+        console = Console()
+        with console.capture() as capture:
+            console.print(table)
+
+        return capture.get()
 
     # ----- AXE Helper Functions -----
     # Helper functions for quickly building ICOMM/AXE commands
@@ -123,7 +152,7 @@ class ICOMMScript:
             table (bytes): AXE table
         """
         axe_packet = AXE('execute', command, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
 
@@ -136,7 +165,7 @@ class ICOMMScript:
             table (bytes): AXE table
         """
         axe_packet = AXE('query', items, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
 
@@ -149,7 +178,7 @@ class ICOMMScript:
             table (bytes): AXE table
         """
         axe_packet = AXE('set', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
 
@@ -162,6 +191,6 @@ class ICOMMScript:
             table (bytes): AXE table
         """
         axe_packet = AXE('statement', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment

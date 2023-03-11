@@ -6,7 +6,8 @@ from construct import (
     VarInt, RawCopy, Probe
 )
 from msgpack import packb, unpackb
-from pprint import pprint
+from rich.console import Console
+from rich.syntax import Syntax
 import binascii
 
 # ----- Binary Parsing/Building -----
@@ -34,9 +35,11 @@ class AXE:
 
     def __repr__(self):
         if self.table == '.':
-            return f"{self.cmd}({self.data})"
+            s = f"{self.cmd}({self.data})"
         else:
-            return f"{self.cmd}({self.data}, table={self.table})"
+            s = f"{self.cmd}({self.data}, table={self.table})"
+
+        return s
 
     def build(self):
         return axe.build({'cmd':self.cmd, 'data':self.data, 'table':self.table})

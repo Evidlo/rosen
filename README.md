@@ -19,7 +19,6 @@ from datetime import date
 from rosen.icomm import ICOMMScript
 from rosen.gcomm import GCOMMScript
 
-
 # ----- Script 1 -----
 
 s1 = ICOMMScript()
@@ -56,26 +55,26 @@ g.save('myscript.pkl')
 ## Manually Building/Parsing ICOMM and AXE Packets
 
 ``` python
->>> from rosen.icomm import ICOMM
->>> from rosen.axe import AXE
+from rosen.icomm import ICOMM
+from rosen.axe import AXE
 
+a = AXE('execute', 'foo_command')
+print(a)
+# execute(foo_command)
+b = a.build()
+print(b)
+# b'!.\x00\xabfoo_command'
+print(AXE.parse(b))
+# execute(foo_command)
 
->>> a = AXE('execute', 'foo_command')
->>> a
-execute(foo_command)
->>> a.build()
-b'!.\x00\xabfoo_command'
->>> AXE.parse(a.build())
-execute(foo_command)
-
-
->>> i = ICOMM('route', 'ground', 'dcm', a)
->>> i
-dcm→ground: execute(foo_command)
->>> i.build()
-b'\x00\x16\x01\x05\x02!.\x00\xabfoo_commandQ\xff\xad\x9a'
->>> ICOMM.parse(i.build())
-dcm→ground: execute(foo_command)
+i = ICOMM('route', 'ground', 'dcm', 0, 0, a)
+print(i)
+# ground→dcm: execute(foo_command)
+b = i.build()
+print(b)
+# b'\x00\x18\x01\x02\x05\x00\x00!.\x00\xabfoo_command@\xae\x86\xd6'
+print(ICOMM.parse(b))
+# dcm→ground: execute(foo_command)
 ```
 
 ## Executing GCOMM Scripts

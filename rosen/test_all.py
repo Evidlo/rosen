@@ -8,82 +8,98 @@ from rosen.common import handle_time
 from datetime import datetime
 import os
 
+# ----- AXE -----
+
 def test_axe_parsebuild():
     b = AXE('execute', 'foobar').build()
     a = AXE.parse(b)
     assert a.cmd == 'execute'
     assert a.data == 'foobar'
 
-def test_icomm_parsebuild():
-    b = ICOMM('route', 'ground', 'dcm', AXE('execute', 'foobar')).build()
+# ----- ICOMM -----
+
+def test_icomm():
+    # manually build an ICOMM packet and parse it
+    b = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar')).build()
     i = ICOMM.parse(b)
     assert i.cmd == 'route'
     assert type(i.payload) is AXE
     assert i.payload.cmd == 'execute'
 
-def test_commscript():
+def test_icommscript():
     # build a basic ICOMM script
-    s = ICOMMScript()
-    s.execute('eduplsb', 'foo_command')
-    s.statement('eduplsb', foo=[1, 2, 3])
-    s.query('eduplsb', [1, 2, 3, 4])
-    s.set('qcb', bar=123)
+    i_scr = ICOMMScript()
+    i_scr.execute('eduplsb', 'foo_command')
+    i_scr.statement('eduplsb', foo=[1, 2, 3])
+    i_scr.query('eduplsb', [1, 2, 3, 4])
+    i_scr.set('qcb', bar=123)
 
     # check size of script and timestamps
-    assert len(s.script) == 4, "Incorrect script length"
-    assert s.script[1][0] > s.script[0][0]
+    assert len(i_scr.script) == 4, "Incorrect script length"
+    assert i_scr.script[1][0] > i_scr.script[0][0]
 
-def test_gcomm_parsebuild():
+# ----- GCOMM -----
+
+def test_gcomm():
     # manually build a gcomm packet and parse it
-    i = ICOMM('route', 'ground', 'dcm', AXE('execute', 'foobar'))
-    b = GCOMM(
+    i = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
+    g = GCOMM(
         'exec_now', filename='foobar.txt', n=0, m=100, offset=1234567890,
         addr='0.0.0.0', time=1234567890, errcode=1, errstr='this is an err', packet=i
     ).build()
-    GCOMM.parse(b)
+    GCOMM.parse(g)
+
+    # test string representation
+    str(g)
 
 def test_gcommscript_commands():
     # build a basic GCOMM script
-    g = GCOMMScript()
-    g.exec_now(b'command')
-    g.abort_script()
-    g.app_file(
+    g_scr = GCOMMScript()
+    i = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
+    g_scr.exec_now(i)
+    g_scr.abort_script()
+    g_scr.app_file(
         'foo.txt', 0, 100, 1234567890,
-        ICOMM('route', 'ground', 'dcm', AXE('execute', 'foobar'))
+        ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
     )
-    g.rm_file('foo.txt')
-    g.exec_file('foo.txt')
-    g.down_file('foo.txt')
-    g.list_sd()
-    g.clear_sd()
-    g.disable_sd()
-    g.enable_sd()
-    g.set_addr('0.0.0.0')
-    g.get_time()
-    g.set_time(1234567890)
-    g.reset_radcom()
-    g.ok()
-    g.nok(1337, 'This is an error message')
+    g_scr.rm_file('foo.txt')
+    g_scr.exec_file('foo.txt')
+    g_scr.down_file('foo.txt')
+    g_scr.list_sd()
+    g_scr.clear_sd()
+    g_scr.disable_sd()
+    g_scr.enable_sd()
+    g_scr.set_addr('0.0.0.0')
+    g_scr.get_time()
+    g_scr.set_time(1234567890)
+    g_scr.reset_radcom()
+    g_scr.ok()
+    g_scr.nok(1337, 'This is an error message')
 
-    assert len(g.script) == 16, "Incorrect GCOMM script length"
+    assert len(g_scr.script) == 16, "Incorrect GCOMM script length"
+
+    # test string representation
+    str(g_scr)
 
 def test_gcommscript_helpers(tmpdir):
-    # build a GCOMM script that uploads an AXE script
+    # test helper methods on GCOMMScript for uploading/scheduling ICOMMScripts
     i = ICOMMScript()
     i.execute('eduplsb', 'foobar')
     i.execute('eduplsb', 'foobar')
     i.execute('eduplsb', 'foobar')
 
-    g = GCOMMScript()
-    g.schedule_script(1234567890, i)
-    assert len(g.script) == 3, "Incorrect GCOMM script length"
+    g_scr = GCOMMScript()
+    g_scr.schedule_script(1234567890, i)
+    assert len(g_scr.script) == 3, "Incorrect GCOMM script length"
 
-    g.upload_script('test_script', i)
-    assert len(g.script) == 6, "Incorrect GCOMM script length"
+    g_scr.upload_script('test_script', i)
+    assert len(g_scr.script) == 6, "Incorrect GCOMM script length"
 
-    g.save('script.pkl')
-    g = GCOMMScript.load('script.pkl')
-    assert len(g.script) == 6, "Incorrect GCOMM script length"
+    g_scr.save('script.pkl')
+    g_scr = GCOMMScript.load('script.pkl')
+    assert len(g_scr.script) == 6, "Incorrect GCOMM script length"
+
+# ----- Common functions -----
 
 def test_handle_time():
     handle_time('2023-01-01')
