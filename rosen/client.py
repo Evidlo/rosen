@@ -5,10 +5,11 @@ import asyncio_dgram
 import pickle
 import time
 import logging
-import argparse
+
+from rosen.gcomm import GCOMMScript, GCOMM
 
 logging.basicConfig(format='%(asctime)s line %(lineno)d: %(message)s')
-log = logging.getLogger(__name__)
+log = logging.getLogger('rosen')
 
 async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
     """Connect to SEAQUE over UDP and start sending up GCOMM packets
@@ -26,9 +27,9 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
     # set up log
     gcomm_log_f = open(gcomm_log, 'wb')
     # get first packet to send
-    # packet = next(packet_gen)
+    packet = next(packet_gen)
 
-    packet = yield
+    # packet = yield
     while True:
         log.debug(f"Sending packet")
 
@@ -41,11 +42,12 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
                 # wait to receive an ACK, continue receiving in the meantime
                 while True:
                     data, remote_addr = await stream.recv()
-                    if data == b'ack':
+                    g = GCOMM.parse(data)
+                    if g.cmd == 'ok':
                         # we received the ack
                         log.debug("ACK received")
-                        # packet = next(packet_gen)
-                        packet = yield
+                        packet = next(packet_gen)
+                        # packet = yield
                         break
                     else:
                         gcomm_log_f.write(data)
@@ -70,9 +72,9 @@ def file_packet_generator(gcomm_script):
     """
     # set addr command here
     # read gcomm script file
-    gcomm_packets = pickle.load(open(gcomm_script, 'rb'))
-    for packet in gcomm_packets:
-        yield packet
+    script = GCOMMScript.load(gcomm_script)
+    for packet in script:
+        yield packet.build()
 
 def shell_packet_generator():
     """Packet generator from user input"""
@@ -84,13 +86,14 @@ def shell_packet_generator():
 def run(args):
     """Run a GCOMM script file"""
     loop = asyncio.new_event_loop()
-    packet_gen = file_packet_generator(args.script)
     if args.loop:
         while True:
+            packet_gen = file_packet_generator(args.script)
             loop.run_until_complete(
                 udp_echo_client(args.host, args.port, loop, packet_gen)
             )
     else:
+        packet_gen = file_packet_generator(args.script)
         loop.run_until_complete(
             udp_echo_client(args.host, args.port, loop, packet_gen)
         )
@@ -100,38 +103,3 @@ def shell(args):
     loop = asyncio.new_event_loop()
     packet_gen = shell_packet_generator()
     loop.run_until_complete(udp_echo_client(args.host, args.port, loop, packet_gen))
-
-def main():
-    parser = argparse.ArgumentParser(description="SEAQUE ground station")
-    parser._positionals.title = "commands"
-
-    subparsers = parser.add_subparsers()
-    subparsers.required = True
-
-    # program arguments
-    parser.add_argument('--debug', action='store_true', default=False, help="enable debugging")
-    parser.add_argument('--host', metavar='HOST', default='127.0.0.1', type=str, help="SEAQUE host")
-    parser.add_argument('--port', metavar='PORT', default=8000, type=str, help="SEAQUE port")
-
-    # subparser for `run` command
-    run_parser = subparsers.add_parser('run', help="run a GCOMM script file")
-    run_parser.add_argument('--loop', action='store_true', default=False, help="loop forever")
-    run_parser.add_argument('script', nargs='?', metavar='PATH', type=str, default='gcomm.script', help="script path")
-    run_parser.set_defaults(func=run)
-
-    shell_parser = subparsers.add_parser('shell', help="run GCOMM commands interactively")
-    shell_parser.set_defaults(func=shell)
-
-    args = parser.parse_args()
-
-    if args.debug:
-        log.setLevel(logging.DEBUG)
-        log.debug("Debugging enabled")
-
-    try:
-        args.func(args)
-    except KeyboardInterrupt:
-        pass
-
-if __name__ == '__main__':
-    main()

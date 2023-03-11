@@ -2,9 +2,9 @@
 
 from construct import (
     Bytes, Byte, PaddedString, Struct, Int8ub, Int32ub, ExprAdapter, Mapping,
-    Default, GreedyBytes
+    Default, GreedyBytes, Padded
 )
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import pickle
 from rich.table import Table, Column
 from rich.console import Console
@@ -30,11 +30,12 @@ gcomm_construct = Struct(
     "filename" / Default(PaddedString(16, 'ascii'), ''),
     "n" / Default(Int32ub, 0),
     "m" / Default(Int32ub, 0),
-    "offset" / Default(Int32ub, 0),
     "addr" / Default(ExprAdapter(Bytes(4), bytes2ip, ip2bytes), '0.0.0.0'),
     "time" / Default(Int32ub, 0),
     "errcode" / Default(Int8ub, 0),
     "errstr" / Default(PaddedString(32, 'ascii'), ''),
+    "offset" / Default(Int32ub, 0),
+    # "packet" / Padded(4092, Default(GreedyBytes, b''))
     "packet" / Default(GreedyBytes, b'')
 )
 
@@ -42,27 +43,40 @@ gcomm_construct = Struct(
 class GCOMM:
     """Class for building/parsing GCOMM packet"""
 
+    # cmd: str
+    # filename: str = ''
+    # n: int = 0
+    # m: int = 0
+    # offset: int = 0
+    # addr: str = None
+    # time: int = 0
+    # errcode: int = 0
+    # errstr: str = ''
+    # packet: ICOMM = None
     cmd: str
     filename: str = ''
     n: int = 0
     m: int = 0
     offset: int = 0
-    addr: str = ''
+    addr: str = '0.0.0.0'
     time: int = 0
     errcode: int = 0
     errstr: str = ''
     packet: ICOMM = None
 
-    # def __init__(self, cmd=None, filename='', n=None, m=None, offset=None,
-    #              addr=None, time=None, errcode=None, errstr=None, packet=None):
-    #     """Initialize GCOMM object"""
-    #     self.cmd, self.filename, self.n, self.m = cmd, filename, n, m
-    #     self.offset, self.addr, self.time, self.errcode = offset, addr, time, errcode
-    #     self.errstr, self.packet = errstr, packet
+    def __repr__(self):
+        """String representation of GCOMM"""
 
-    # def __repr__(self):
-    #     """GCOMM string represenetation"""
-    #     return "GCOMM"
+        # only show fields changed from default
+        display_fields = [self.cmd]
+        for field in fields(self):
+            if field.name == 'cmd':
+                continue
+            val = getattr(self, field.name)
+            if val != field.default:
+                display_fields.append(f"{field.name}={val}")
+
+        return f"GCOMM({', '.join(display_fields)})"
 
     def build(self):
         """Build bytes for GCOMM packet
@@ -73,7 +87,8 @@ class GCOMM:
         return gcomm_construct.build(dict(
             cmd=self.cmd, filename=self.filename, n=self.n, m=self.m,
             offset=self.offset, addr=self.addr, time=self.time, errcode=self.errcode,
-            errstr=self.errstr, packet=self.packet.build()
+            errstr=self.errstr,
+            packet=self.packet.build() if self.packet else None
         ))
 
     @classmethod
@@ -86,17 +101,29 @@ class GCOMM:
         """
         g = gcomm_construct.parse(raw_bytes)
         return cls(
-            g.cmd, g.filename, g.n, g.m, g.offset, g.addr, str(g.time),
-            str(g.errcode), g.errstr, str(g.packet)
+            g.cmd, g.filename, g.n, g.m, g.offset, g.addr, g.time,
+            g.errcode, g.errstr, ICOMM.parse(g.packet) if g.packet else None
         )
 
 
 class GCOMMScript:
+    """Class which holds many GCOMM objects. GCOMMScripts can be saved to disk for
+    later consumption by `rosen run script.pkl` and display as tables when printed"""
 
     def __init__(self, name=''):
+        """Initialize GCOMMScript object
+
+        Args:
+            name (str): optional name displayed when script is printed
+        """
+        self.name = name
         # list of bytestrings containing GCOMM commands
         self.script = []
-        self.name = name
+
+    def __iter__(self):
+        """Allow iterating over GCOMM objects within script"""
+        for g in self.script:
+            yield g
 
     def __repr__(self):
         """Tabular text representation of GCOMM script"""
@@ -136,6 +163,7 @@ class GCOMMScript:
         return capture.get()
 
     # ----- GCOMM Commands -----
+    # GCOMM commands as specified by SEAQUE_Protocol_Spec.docx
 
     def exec_now(self, packet):
         """Generate GCOMM EXEC_NOW command

@@ -77,9 +77,15 @@ print(ICOMM.parse(b))
 # dcm→ground: execute(foo_command)
 ```
 
-## Executing GCOMM Scripts
+## Running Client and Server
 
-    $ rosen run myscript.pkl
+Run the client and send GCOMM commands from file.  See `rosen -h` for host/port configuration
+
+    $ rosen run myscript.pkl --loop
+    
+There is also a test server that responds with GCOMM `OK` packets to everything
+
+    $ rosen server
 
 ## Running Tests
 

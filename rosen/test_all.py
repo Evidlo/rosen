@@ -46,8 +46,14 @@ def test_gcomm():
     g = GCOMM(
         'exec_now', filename='foobar.txt', n=0, m=100, offset=1234567890,
         addr='0.0.0.0', time=1234567890, errcode=1, errstr='this is an err', packet=i
-    ).build()
-    GCOMM.parse(g)
+    )
+    GCOMM.parse(g.build())
+
+    # build other packets
+    g = GCOMM('ok', addr='0.0.0.0')
+    GCOMM.parse(g.build())
+    g = GCOMM('ok')
+    GCOMM.parse(g.build())
 
     # test string representation
     str(g)

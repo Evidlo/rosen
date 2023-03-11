@@ -5,7 +5,7 @@ from construct import (
     Mapping, OffsettedEnd, Prefixed, Bytes, CString,
     VarInt, RawCopy, Probe
 )
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from msgpack import packb, unpackb
 from rich.console import Console
 from rich.table import Table
@@ -55,23 +55,33 @@ class ICOMM:
     cmd: str
     frm: str
     to: str
-    n: int
-    m: int
-    payload: AXE
+    n: int = 0
+    m: int = 0
+    payload: AXE = None
 
     # def __init__(self, cmd=None, to=None, frm=None, n=None, m=None, payload=None):
     #     self.cmd, self.to, self.frm, self.payload=cmd, to, frm, payload
 
     def __repr__(self):
         """ICOMM string representation"""
-        if self.cmd == 'ack':
-            p = "ACK"
-        elif self.cmd == 'nack':
-            p = "NACK"
-        else:
-            p = self.payload
+        # if self.cmd == 'ack':
+        #     p = "ACK"
+        # elif self.cmd == 'nack':
+        #     p = "NACK"
+        # else:
+        #     p = self.payload
+        # return f"{self.frm}→{self.to}: {p}"
 
-        return f"{self.frm}→{self.to}: {p}"
+        # only show fields changed from default
+        display_fields = [self.cmd]
+        for field in fields(self):
+            if field.name == 'cmd':
+                continue
+            val = getattr(self, field.name)
+            if val != field.default:
+                display_fields.append(f"{field.name}={val}")
+
+        return f"ICOMM({', '.join(display_fields)})"
 
     def build(self):
         """Build bytes for GCOMM packet
