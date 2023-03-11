@@ -63,7 +63,8 @@ class GCOMM(Packet):
             bytes
         """
         return gcomm_construct.build(dict(
-            cmd=self.cmd, filename=self.filename, n=self.n, m=self.m,
+            cmd=self.cmd, filename=self.filename, n=self.n,
+            m=self.m,
             offset=self.offset, addr=self.addr, time=self.time, errcode=self.errcode,
             errstr=self.errstr,
             packet=self.packet.build() if self.packet else None
@@ -116,16 +117,17 @@ class GCOMMScript(Script):
         for g in self.script:
             table.add_row(
                 g.cmd, g.filename,
-                str(g.n or ''), str(g.m or ''),
-                str(g.offset or ''),
+                str(g.n) if g.cmd == 'app_file' else '',
+                str(g.m) if g.cmd == 'app_file', else '',
+                str(g.offset) if g.cmd == 'app_file' else '',
                 g.addr if g.addr != GCOMM.addr else '',
                 str(g.time or ''),
                 str(g.errcode or ''), str(g.errstr or ''),
                 g.packet.cmd if g.packet else '',
                 g.packet.frm if g.packet else '',
                 g.packet.to if g.packet else '',
-                str(g.packet.n or '') if g.packet else '',
-                str(g.packet.m or '') if g.packet else '',
+                str(g.packet.n) if (g.packet and g.packet.m > 0) else '',
+                str(g.packet.m) if (g.packet and g.packet.m > 0) else '',
                 str(g.packet.payload) if g.packet else '',
             )
 

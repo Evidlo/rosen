@@ -44,6 +44,10 @@ def test_icommscript():
     # check size of script and timestamps
     assert len(i_scr.script) == 4, "Incorrect script length"
     assert i_scr.script[1][0] > i_scr.script[0][0]
+    # check ICOMM packet N and M
+    for n, (offset, i) in enumerate(i_scr):
+        assert i.n == n, "Incorrect ICOMM N field"
+        assert i.m == len(i_scr.script), "Incorrect ICOMM M field"
 
     try:
         str(i_scr)
@@ -80,9 +84,11 @@ def test_gcommscript_commands():
     g_scr.exec_now(i)
     g_scr.abort_script()
     g_scr.app_file(
-        'foo.txt', 0, 100, 1234567890,
+        'foo.txt', 5, 100, 1234567890,
         ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
     )
+    assert g_scr.script[-1].n == 5, "Incorrect GCOMM N field"
+    assert g_scr.script[-1].m == 100, "Incorrect GCOMM N field"
     g_scr.rm_file('foo.txt')
     g_scr.exec_file('foo.txt')
     g_scr.down_file('foo.txt')
@@ -113,10 +119,10 @@ def test_gcommscript_helpers(tmpdir):
     i.execute('eduplsb', 'foobar')
 
     g_scr = GCOMMScript()
-    g_scr.schedule_script(1234567890, i)
+    g_scr.upload_script('test_script', i)
     assert len(g_scr.script) == 3, "Incorrect GCOMM script length"
 
-    g_scr.upload_script('test_script', i)
+    g_scr.schedule_script(1234567890, i)
     assert len(g_scr.script) == 6, "Incorrect GCOMM script length"
 
     g_scr.save('script.pkl')

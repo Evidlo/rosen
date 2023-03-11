@@ -12,7 +12,7 @@ from rich.table import Table
 import binascii
 
 from rosen.axe import AXE
-from rosen.common import Script, Packet
+from rosen.common import Script, Packet, MutInt
 
 device_map = Mapping(
     Byte,
@@ -57,7 +57,7 @@ class ICOMM(Packet):
     frm: str
     to: str
     n: int = 0
-    m: int = 0
+    m: int|MutInt = 0
     payload: AXE = None
 
     def build(self):
@@ -70,7 +70,10 @@ class ICOMM(Packet):
         return icomm_construct.build({'body':{'value':
             {
                 'cmd':self.cmd, 'to':self.to, 'frm':self.frm, 'n':self.n,
-                'm':self.m, 'payload':axe_bytes
+                # accept int or list for length
+                # 'm':len(self.m) if hasattr(self, '__len__') else self.m,
+                'm':self.m,
+                'payload':axe_bytes
             }
         }})
 
@@ -98,8 +101,12 @@ class ICOMMScript(Script):
         """
         # optional name of the script for printing purposes
         self.name = name
-        # current time offset
+        # starting time offset
         self.offset = offset
+        # ICOMM packet number
+        self.n = 0
+        # total packets
+        self.m = MutInt(0)
         # offset time increment after adding a command
         self.increment = increment
         # list of tuples containing (execution_time, icomm_packet)
@@ -109,14 +116,15 @@ class ICOMMScript(Script):
         """Pretty print object as table"""
 
         table = Table(
-            "Time", "From", "To", "Payload",
+            "Offset", "From", "To", "N", "M", "Payload",
             title=f"ICOMMScript: {self.name}",
         )
 
         for cmd in self.script:
             table.add_row(
-                str(cmd[0]), cmd[1].frm, cmd[1].to,
-                str(cmd[1].payload))
+                str(cmd[0]), cmd[1].frm, cmd[1].to, str(cmd[1].n),
+                str(cmd[1].m), str(cmd[1].payload)
+            )
 
         console = Console()
         with console.capture() as capture:
@@ -136,9 +144,11 @@ class ICOMMScript(Script):
             table (bytes): AXE table
         """
         axe_packet = AXE('execute', command, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
+        self.n += 1
+        self.m += 1
 
     def query(self, device, items, table='.'):
         """Generate ICOMM/AXE 'query' command
@@ -149,9 +159,11 @@ class ICOMMScript(Script):
             table (bytes): AXE table
         """
         axe_packet = AXE('query', items, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
+        self.n += 1
+        self.m += 1
 
     def set(self, device, table='.', **data):
         """Generate ICOMM/AXE 'set' command
@@ -162,9 +174,11 @@ class ICOMMScript(Script):
             table (bytes): AXE table
         """
         axe_packet = AXE('set', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
+        self.n += 1
+        self.m += 1
 
     def statement(self, device, table='.', **data):
         """Generate ICOMM/AXE 'statement' command
@@ -175,6 +189,8 @@ class ICOMMScript(Script):
             table (bytes): AXE table
         """
         axe_packet = AXE('statement', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', 0, 0, axe_packet)
+        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
+        self.n += 1
+        self.m += 1

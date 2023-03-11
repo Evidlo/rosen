@@ -77,6 +77,51 @@ print(ICOMM.parse(b))
 # dcm→ground: execute(foo_command)
 ```
 
+## Inspecting Packets
+
+All packet and script classes have pretty printing to ease inspection
+
+``` python
+from rosen.axe import AXE
+from rosen.icomm import ICOMMScript, ICOMM
+from rosen.gcomm import GCOMMScript
+
+is1 = ICOMMScript('set up some quantum things')
+is1.execute('qcb', 'butterflies')
+is1.set('dcm', foo=[1, 2, 3])
+is1.query('qcb', ['therm1', 'therm2'])
+print(is1)
+#            ICOMMScript: set up some quantum things             
+# ┏━━━━━━━━┳━━━━━━┳━━━━━━━━┳━━━┳━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃ Offset ┃ From ┃ To     ┃ N ┃ M ┃ Payload                     ┃
+# ┡━━━━━━━━╇━━━━━━╇━━━━━━━━╇━━━╇━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+# │ 0      │ qcb  │ ground │ 0 │ 3 │ execute(butterflies)        │
+# │ 1      │ dcm  │ ground │ 1 │ 3 │ set({'foo': [1, 2, 3]})     │
+# │ 2      │ qcb  │ ground │ 2 │ 3 │ query(['therm1', 'therm2']) │
+# └────────┴──────┴────────┴───┴───┴─────────────────────────────┘
+
+print(is1.script[0])
+# (0, ICOMM(route, frm=qcb, to=ground, n=0, m=3, payload=execute(butterflies)))
+
+gs1 = GCOMMScript('week 35 script')
+gs1.schedule_script('wednesday', is1)
+gs1.exec_now(ICOMM('route', 'ground', 'qcb', 0, 0, AXE('execute', 'laser_start')))
+gs1.set_time('2023-01-01 4pm')
+gs1.get_time()
+print(gs1)
+#                                                             GCOMMScript: week 35 script                                                              
+# ┏━━━━━━━━━━┳━━━━━━━━━━━━┳━━━┳━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━┳━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃ Command  ┃ Filename   ┃ N ┃ M ┃ Offset ┃ Address ┃ Time       ┃ Errcode ┃ Errstr ┃ Command ┃ From   ┃ To     ┃ N ┃ M ┃ AXE                         ┃
+# ┡━━━━━━━━━━╇━━━━━━━━━━━━╇━━━╇━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━╇━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+# │ app_file │ 1678838400 │ 0 │ 3 │ 0      │         │            │         │        │ route   │ qcb    │ ground │ 0 │ 3 │ execute(butterflies)        │
+# │ app_file │ 1678838400 │ 1 │ 3 │ 1      │         │            │         │        │ route   │ dcm    │ ground │ 1 │ 3 │ set({'foo': [1, 2, 3]})     │
+# │ app_file │ 1678838400 │ 2 │ 3 │ 2      │         │            │         │        │ route   │ qcb    │ ground │ 2 │ 3 │ query(['therm1', 'therm2']) │
+# │ exec_now │            │   │   │        │         │            │         │        │ route   │ ground │ qcb    │   │   │ execute(laser_start)        │
+# │ set_time │            │   │   │        │         │ 1672588800 │         │        │         │        │        │   │   │                             │
+# │ get_time │            │   │   │        │         │            │         │        │         │        │        │   │   │                             │
+# └──────────┴────────────┴───┴───┴────────┴─────────┴────────────┴─────────┴────────┴─────────┴────────┴────────┴───┴───┴─────────────────────────────┘
+```
+
 ## Running Client and Server
 
 Run the client and send GCOMM commands from file.  See `rosen -h` for host/port configuration
