@@ -118,7 +118,7 @@ class GCOMMScript(Script):
             table.add_row(
                 g.cmd, g.filename,
                 str(g.n) if g.cmd == 'app_file' else '',
-                str(g.m) if g.cmd == 'app_file', else '',
+                str(g.m) if g.cmd == 'app_file' else '',
                 str(g.offset) if g.cmd == 'app_file' else '',
                 g.addr if g.addr != GCOMM.addr else '',
                 str(g.time or ''),

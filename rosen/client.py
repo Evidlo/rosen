@@ -31,12 +31,12 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
 
     # packet = yield
     while True:
-        log.debug(f"Sending packet")
+        log.debug(f"Sending {packet}")
 
         # wait for an ACK, and only increment packet_num counter if we receive one
         try:
             # send next packet
-            await stream.send(packet)
+            await stream.send(packet.build())
 
             async with asyncio.timeout(ack_time):
                 # wait to receive an ACK, continue receiving in the meantime
@@ -74,7 +74,7 @@ def file_packet_generator(gcomm_script):
     # read gcomm script file
     script = GCOMMScript.load(gcomm_script)
     for packet in script:
-        yield packet.build()
+        yield packet
 
 def shell_packet_generator():
     """Packet generator from user input"""
