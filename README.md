@@ -11,6 +11,8 @@ This repo contains the ground station software to be run on a Nanoracks ground s
 - ICOMM - Communication between RADCOM and various payloads
   - Can be scheduled to be delivered to payloads at specific times.  This is how payload scripts are written.
 - AXE - Actions executed by payloads, like setting/getting variables or running internal routines.
+
+See [SEAQUE_Protocol_Spec.docx](https://uillinoisedu.sharepoint.com/:w:/s/Gambit/Ead1y8GhTDdDpPL6pMAykbYBchad07YlAGAax6WgWh3yvQ?e=JvjfS6) for more details.
     
 ## Creating and Saving Scripts
 
