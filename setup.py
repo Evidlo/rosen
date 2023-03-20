@@ -29,7 +29,8 @@ setup(
         "python-dateutil==2.8.2",
         # FIXME: construct hasn't pushed newest updates to pypi
         # we install from the git repo to get them
-        "construct@git+https://github.com/construct/construct#35cfad42bbc392a4c2946195036418846736ed11"
+        "construct@git+https://github.com/construct/construct#35cfad42bbc392a4c2946195036418846736ed11",
+        "msgpack==1.0.5"
     ],
     include_package_data=True,
     # automatically look for subfolders with __init__.py

@@ -3,7 +3,7 @@
 from construct import (
     Checksum, Struct, Int8ub, Int16ub, ExprAdapter, this, Byte, GreedyBytes,
     Mapping, OffsettedEnd, Prefixed, Bytes, CString,
-    VarInt, RawCopy, Probe
+    VarInt, RawCopy, Probe, Padded
 )
 from dataclasses import dataclass
 from msgpack import packb, unpackb
@@ -26,29 +26,31 @@ device_map = Mapping(
     }
 )
 
-icomm_construct = Prefixed(Int16ub, Struct(
-    "body" / RawCopy(Struct(
-        "cmd" / Mapping(
-            Byte,
-            # command map
-            {
-                'route': 1,
-                'ack': 2,
-                'nack': 3,
-            }
-        ),
-        "to" / device_map,
-        "frm" / device_map,
-        "n" / Int8ub,
-        "m" / Int8ub,
-        "payload" / OffsettedEnd(-4, GreedyBytes),
-    )),
-    "checksum" / Checksum(
-        Bytes(4),
-        lambda data: binascii.crc32(data).to_bytes(4, 'big'),
-        this.body.data
-    )
-))
+icomm_construct = Padded(
+    4092,
+    Prefixed(Int16ub, Struct(
+        "body" / RawCopy(Struct(
+            "cmd" / Mapping(
+                Byte,
+                # command map
+                {
+                    'route': 1,
+                    'ack': 2,
+                    'nack': 3,
+                }
+            ),
+            "to" / device_map,
+            "frm" / device_map,
+            "n" / Int8ub,
+            "m" / Int8ub,
+            "payload" / OffsettedEnd(-4, GreedyBytes),
+        )),
+        "checksum" / Checksum(
+            Bytes(4),
+            lambda data: binascii.crc32(data).to_bytes(4, 'big'),
+            this.body.data
+        )
+)))
 
 @dataclass(repr=False)
 class ICOMM(Packet):
