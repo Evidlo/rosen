@@ -9,7 +9,7 @@ import pickle
 from rich.table import Table, Column
 from rich.console import Console
 
-from rosen.icomm import ICOMMScript, ICOMM, icomm_construct
+from rosen.icomm import ICOMMScript, ICOMM
 from rosen.common import handle_time, Script, Packet
 
 def bytes2ip(b, *args):
