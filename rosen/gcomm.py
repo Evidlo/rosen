@@ -228,7 +228,7 @@ class GCOMMScript(Script):
             i (ICOMMScript): ICOMM script to upload
         """
 
-        filename = str(handle_time(time))
+        filename = '!' + str(handle_time(time))
         self.upload_script(filename, i)
 
     def upload_script(self, filename, i):
