@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 
-from construct import (
-    Checksum, Struct, Int8ub, Int16ub, ExprAdapter, this, Byte, GreedyBytes,
-    Mapping, OffsettedEnd, Prefixed, Bytes, CString,
-    VarInt, RawCopy, Probe
-)
+from construct import Struct, ExprAdapter, Byte, GreedyBytes, Mapping, CString
 from msgpack import packb, unpackb
 from rich.console import Console
 from rich.syntax import Syntax

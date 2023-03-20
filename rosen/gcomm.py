@@ -2,14 +2,14 @@
 
 from construct import (
     Bytes, Byte, PaddedString, Struct, Int8ub, Int32ub, ExprAdapter, Mapping,
-    Default, GreedyBytes, Padded
+    Default, Bytes, GreedyBytes
 )
 from dataclasses import dataclass, fields
 import pickle
 from rich.table import Table, Column
 from rich.console import Console
 
-from rosen.icomm import ICOMMScript, ICOMM
+from rosen.icomm import ICOMMScript, ICOMM, icomm_construct
 from rosen.common import handle_time, Script, Packet
 
 def bytes2ip(b, *args):
@@ -37,7 +37,6 @@ gcomm_construct = Struct(
     "errcode" / Default(Int8ub, 0),
     "errstr" / Default(PaddedString(32, 'ascii'), ''),
     "offset" / Default(Int32ub, 0),
-    # "packet" / Padded(4092, Default(GreedyBytes, b''))
     "packet" / Default(GreedyBytes, b'')
 )
 
