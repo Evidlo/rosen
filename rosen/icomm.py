@@ -88,6 +88,10 @@ class ICOMM(Packet):
             AXE.parse(parsed.body.value.payload)
         )
 
+    @property
+    def size():
+        return icomm_construct.sizeof()
+
 
 # ----- Scripting -----
 
