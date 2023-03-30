@@ -2,14 +2,14 @@
 
 from construct import (
     Bytes, Byte, PaddedString, Struct, Int8ub, Int32ub, ExprAdapter, Mapping,
-    Default, Bytes, GreedyBytes
+    Default, Bytes
 )
 from dataclasses import dataclass, fields
 import pickle
 from rich.table import Table, Column
 from rich.console import Console
 
-from rosen.icomm import ICOMMScript, ICOMM
+from rosen.icomm import ICOMMScript, ICOMM, icomm_construct
 from rosen.common import handle_time, Script, Packet
 
 def bytes2ip(b, *args):
@@ -37,7 +37,10 @@ gcomm_construct = Struct(
     "errcode" / Default(Int8ub, 0),
     "errstr" / Default(PaddedString(32, 'ascii'), ''),
     "offset" / Default(Int32ub, 0),
-    "packet" / Default(GreedyBytes, b'')
+    "packet" / Default(
+        Bytes(icomm_construct.sizeof()),
+        b'\x00' * icomm_construct.sizeof()
+    )
 )
 
 @dataclass(repr=False)
@@ -80,8 +83,13 @@ class GCOMM(Packet):
         g = gcomm_construct.parse(raw_bytes)
         return cls(
             g.cmd, g.filename, g.n, g.m, g.offset, g.addr, g.time,
-            g.errcode, g.errstr, ICOMM.parse(g.packet) if g.packet else None
+            g.errcode, g.errstr,
+            ICOMM.parse(g.packet) if g.cmd in ('exec_now', 'app_file') else None
         )
+
+    @property
+    def size():
+        return gcomm_construct.sizeof()
 
 
 class GCOMMScript(Script):
