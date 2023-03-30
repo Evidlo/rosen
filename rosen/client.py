@@ -65,14 +65,17 @@ async def udp_echo_client(host, port, loop, packet_gen, ack_time=1, gcomm_log='g
     stream.close()
 
 def file_packet_generator(gcomm_script):
-    """Packet generator from file
+    """Packet generator from file or GCOMMScript
 
     Args:
-        gcomm_script (str): path to gcomm script file
+        gcomm_script (str or GCOMMScript): path to gcomm script file or GCOMMScript object
     """
     # set addr command here
     # read gcomm script file
-    script = GCOMMScript.load(gcomm_script)
+    if type(gcomm_script) is str:
+        script = GCOMMScript.load(gcomm_script)
+    else:
+        script = gcomm_script
     for packet in script:
         yield packet
 
