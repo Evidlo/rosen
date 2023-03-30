@@ -58,6 +58,8 @@ class GCOMM(Packet):
     errstr: str = ''
     packet: ICOMM = None
 
+    size = gcomm_construct.sizeof()
+
     def build(self):
         """Build bytes for GCOMM packet
 
@@ -86,10 +88,6 @@ class GCOMM(Packet):
             g.errcode, g.errstr,
             ICOMM.parse(g.packet) if g.cmd in ('exec_now', 'app_file') else None
         )
-
-    @property
-    def size():
-        return gcomm_construct.sizeof()
 
 
 class GCOMMScript(Script):

@@ -62,6 +62,8 @@ class ICOMM(Packet):
     m: int|MutInt = 0
     payload: AXE = None
 
+    size = icomm_construct.sizeof()
+
     def build(self):
         """Build bytes for GCOMM packet
 
@@ -87,10 +89,6 @@ class ICOMM(Packet):
             parsed.body.value.n, parsed.body.value.m,
             AXE.parse(parsed.body.value.payload)
         )
-
-    @property
-    def size():
-        return icomm_construct.sizeof()
 
 
 # ----- Scripting -----
