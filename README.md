@@ -54,7 +54,7 @@ g.exec_file('testfile')
 g.save('myscript.pkl')
 ```
 
-## Manually Building/Parsing ICOMM and AXE Packets
+## Manually Building/Parsing GCOMM, ICOMM and AXE Packets
 
 ``` python
 from rosen.icomm import ICOMM
@@ -77,6 +77,13 @@ print(b)
 # b'\x00\x18\x01\x02\x05\x00\x00!.\x00\xabfoo_command@\xae\x86\xd6'
 print(ICOMM.parse(b))
 # dcm→ground: execute(foo_command)
+
+g = GCOMM('exec_now', packet=i)
+b = g.build()
+print(len(b))
+# 4162
+print(GCOMM.parse(b))
+# GCOMM(exec_now, addr=0.0.0.0, packet=ICOMM(route, frm=dcm, to=ground, payload=execute(foo_command)))
 ```
 
 ## Inspecting Packets
