@@ -25,32 +25,35 @@ device_map = Mapping(
         'radcom': 6
     }
 )
+command_map = Mapping(
+    Byte,
+    # command map
+    {
+        'route': 1,
+        'ack': 2,
+        'nack': 3,
+    }
+)
 
 icomm_construct = Padded(
     4092,
-    Prefixed(Int16ub, Struct(
+    Struct(
         "body" / RawCopy(Struct(
-            "cmd" / Mapping(
-                Byte,
-                # command map
-                {
-                    'route': 1,
-                    'ack': 2,
-                    'nack': 3,
-                }
-            ),
+            "size" / Int16ub,
+            "cmd" / command_map,
             "to" / device_map,
             "frm" / device_map,
             "n" / Int8ub,
             "m" / Int8ub,
-            "payload" / OffsettedEnd(-4, GreedyBytes),
+            "payload" / Bytes(this.size),
         )),
         "checksum" / Checksum(
             Bytes(4),
             lambda data: binascii.crc32(data).to_bytes(4, 'big'),
             this.body.data
         )
-)))
+    )
+)
 
 @dataclass(repr=False)
 class ICOMM(Packet):
@@ -73,11 +76,8 @@ class ICOMM(Packet):
         axe_bytes = self.payload.build()
         return icomm_construct.build({'body':{'value':
             {
-                'cmd':self.cmd, 'to':self.to, 'frm':self.frm, 'n':self.n,
-                # accept int or list for length
-                # 'm':len(self.m) if hasattr(self, '__len__') else self.m,
-                'm':self.m,
-                'payload':axe_bytes
+                'size': len(axe_bytes), 'cmd':self.cmd, 'to':self.to, 'frm':self.frm,
+                'n':self.n, 'm':self.m, 'payload':axe_bytes
             }
         }})
 
