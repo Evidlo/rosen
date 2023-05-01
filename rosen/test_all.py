@@ -102,8 +102,9 @@ def test_gcommscript_commands():
     g_scr.reset_radcom()
     g_scr.ok()
     g_scr.nok(1337, 'This is an error message')
+    g_scr.file_sd('foo.txt')
 
-    assert len(g_scr.script) == 16, "Incorrect GCOMM script length"
+    assert len(g_scr.script) == 17, "Incorrect GCOMM script length"
 
     # test string representation
     try:

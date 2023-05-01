@@ -26,7 +26,7 @@ gcomm_construct = Struct(
             'exec_now':1, 'abort_script':2, 'app_file':3, 'rm_file':4,
             'exec_file':5, 'down_file':6, 'list_sd': 7, 'clear_sd':8,
             'disable_sd':9, 'enable_sd':10, 'set_addr':11, 'get_time':12,
-            'set_time':13, 'reset_radcom':14, 'ok':15, 'nok':16
+            'set_time':13, 'reset_radcom':14, 'ok':15, 'nok':16, 'file_sd': 17
         }
     ),
     "filename" / Default(PaddedString(16, 'ascii'), ''),
@@ -219,6 +219,10 @@ class GCOMMScript(Script):
     def nok(self, errcode, errstr):
         """Generate GCOMM NOK command """
         self.script.append(GCOMM('nok', errcode=errcode, errstr=errstr))
+
+    def file_sd(self, filename):
+        """Generate GCOMM FILE_SD command """
+        self.script.append(GCOMM('file_sd', filename=filename))
 
 
     # ----- Helper Functions -----
