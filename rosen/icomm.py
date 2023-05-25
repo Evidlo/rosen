@@ -2,7 +2,7 @@
 
 from construct import (
     Checksum, Struct, Int8ub, Int16ub, ExprAdapter, this, Byte, GreedyBytes,
-    Mapping, OffsettedEnd, Prefixed, Bytes, CString,
+    Mapping, Prefixed, Bytes, CString,
     VarInt, RawCopy, Probe, Padded
 )
 from dataclasses import dataclass
