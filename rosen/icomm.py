@@ -30,9 +30,10 @@ command_map = Mapping(
     Byte,
     # command map
     {
-        'route': 1,
-        'ack': 2,
-        'nack': 3,
+        'cmd': 0,
+        'ack': 1,
+        'nack': 2,
+        'busy': 3
     }
 )
 
@@ -44,6 +45,8 @@ icomm_construct = Padded(
             "cmd" / command_map,
             "to" / device_map,
             "frm" / device_map,
+            "last" / device_map,
+            "seq" / Int8ub,
             "n" / Int8ub,
             "m" / Int8ub,
             "payload" / Bytes(this.size),
@@ -60,11 +63,11 @@ icomm_construct = Padded(
 class ICOMM(Packet):
     """Class for building/parsing ICOMM packet"""
     cmd: str
-    frm: str
     to: str
+    payload: AXE
+    frm: str = 'ground'
     n: int = 0
     m: Union[int, MutInt] = 0
-    payload: AXE = None
 
     size = icomm_construct.sizeof()
 
@@ -78,7 +81,7 @@ class ICOMM(Packet):
         return icomm_construct.build({'body':{'value':
             {
                 'size': len(axe_bytes), 'cmd':self.cmd, 'to':self.to, 'frm':self.frm,
-                'n':self.n, 'm':self.m, 'payload':axe_bytes
+                'last':self.frm, 'seq':0, 'n':self.n, 'm':self.m, 'payload':axe_bytes
             }
         }})
 
@@ -86,10 +89,10 @@ class ICOMM(Packet):
     def parse(cls, raw_bytes):
         parsed = icomm_construct.parse(raw_bytes)
         return cls(
-            parsed.body.value.cmd, parsed.body.value.to, parsed.body.value.frm,
+            parsed.body.value.cmd, parsed.body.value.to,
+            AXE.parse(parsed.body.value.payload), parsed.body.value.frm,
             parsed.body.value.n, parsed.body.value.m,
-            AXE.parse(parsed.body.value.payload)
-        )
+                    )
 
 
 # ----- Scripting -----
@@ -108,10 +111,6 @@ class ICOMMScript(Script):
         self.name = name
         # starting time offset
         self.offset = offset
-        # ICOMM packet number
-        self.n = 0
-        # total packets
-        self.m = MutInt(0)
         # offset time increment after adding a command
         self.increment = increment
         # list of tuples containing (execution_time, icomm_packet)
@@ -121,14 +120,14 @@ class ICOMMScript(Script):
         """Pretty print object as table"""
 
         table = Table(
-            "Offset", "From", "To", "N", "M", "Payload",
+            "Offset", "From", "To", "Payload",
             title=f"ICOMMScript: {self.name}",
         )
 
         for cmd in self.script:
             table.add_row(
-                str(cmd[0]), cmd[1].frm, cmd[1].to, str(cmd[1].n),
-                str(cmd[1].m), str(cmd[1].payload)
+                str(cmd[0]), cmd[1].frm, cmd[1].to,
+                str(cmd[1].payload)
             )
 
         console = Console()
@@ -140,62 +139,50 @@ class ICOMMScript(Script):
     # ----- AXE Helper Functions -----
     # Helper functions for quickly building ICOMM/AXE commands
 
-    def execute(self, device, command, table='.'):
+    def execute(self, device, command):
         """Generate ICOMM/AXE 'execute' command
 
         Args:
             device (str): ICOMM device name
             command (str): AXE command to run on device
-            table (bytes): AXE table
         """
-        axe_packet = AXE('execute', command, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
+        axe_packet = AXE('execute', command)
+        icomm_packet = ICOMM('cmd', device, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
-        self.n += 1
-        self.m += 1
 
-    def query(self, device, items, table='.'):
+    def query(self, device, items):
         """Generate ICOMM/AXE 'query' command
 
         Args:
             device (str): ICOMM device name
             items (list): AXE items to query on device
-            table (bytes): AXE table
         """
-        axe_packet = AXE('query', items, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
+        axe_packet = AXE('query', items)
+        icomm_packet = ICOMM('cmd', device, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
-        self.n += 1
-        self.m += 1
 
-    def set(self, device, table='.', **data):
+    def set(self, device, **data):
         """Generate ICOMM/AXE 'set' command
 
         Args:
             device (str): ICOMM device name
             **data (keyword args): AXE items to set on device
-            table (bytes): AXE table
         """
-        axe_packet = AXE('set', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
+        axe_packet = AXE('set', data)
+        icomm_packet = ICOMM('cmd', device, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
-        self.n += 1
-        self.m += 1
 
-    def statement(self, device, table='.', **data):
+    def statement(self, device, **data):
         """Generate ICOMM/AXE 'statement' command
 
         Args:
             device (str): ICOMM device name
             **data (keyword args): AXE items in statement
-            table (bytes): AXE table
         """
-        axe_packet = AXE('statement', data, table=table)
-        icomm_packet = ICOMM('route', device, 'ground', self.n, self.m, axe_packet)
+        axe_packet = AXE('statement', data)
+        icomm_packet = ICOMM('cmd', device, axe_packet)
         self.script.append((self.offset, icomm_packet))
         self.offset += self.increment
-        self.n += 1
-        self.m += 1
