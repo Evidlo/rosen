@@ -10,6 +10,7 @@ from msgpack import packb, unpackb
 from rich.console import Console
 from rich.table import Table
 import binascii
+from typing import Union
 
 from rosen.axe import AXE
 from rosen.common import Script, Packet, MutInt
@@ -62,7 +63,7 @@ class ICOMM(Packet):
     frm: str
     to: str
     n: int = 0
-    m: int|MutInt = 0
+    m: Union[int, MutInt] = 0
     payload: AXE = None
 
     size = icomm_construct.sizeof()
