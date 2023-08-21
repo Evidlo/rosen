@@ -1,6 +1,6 @@
 # Groundstation
 
-This repo contains the ground station software to be run on a Nanoracks ground station machine for communicating with SEAQUE as well as functions for generating scripts to send to the ground station.
+This repo contains the ground station software to be run on a ground station machine for communicating with SEAQUE as well as functions for generating scripts to send to the ground station.
 
     pip install -e .
     
@@ -50,7 +50,7 @@ g.upload_script('testfile', s2)
 g.reset_radcom()
 g.exec_file('testfile')
 
-# save GCOMM script to file to be sent to Nanoracks
+# save GCOMM script to file to be sent
 g.save('myscript.pkl')
 ```
 
