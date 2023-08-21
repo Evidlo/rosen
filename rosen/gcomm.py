@@ -250,7 +250,7 @@ class GCOMMScript(Script):
         assert len(filename) <= 12, "Filename must not be more than 12 characters"
         for n, (offset, icomm_packet) in enumerate(i.script):
             self.app_file(
-                filename, n, len(i.script), offset, icomm_packet
+                filename, n+1, len(i.script), offset, icomm_packet
             )
 
     def save(self, filename):

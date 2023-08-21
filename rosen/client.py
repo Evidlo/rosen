@@ -10,7 +10,7 @@ from rosen.gcomm import GCOMMScript, GCOMM
 logging.basicConfig(format='%(asctime)s line %(lineno)d: %(message)s')
 log = logging.getLogger('rosen')
 
-async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
+async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
     """Connect to SEAQUE over UDP and start sending up GCOMM packets
 
     Args:
@@ -77,7 +77,6 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
 
 def file_packet_generator(gcomm_script):
     """Packet generator from file or GCOMMScript
-
     Args:
         gcomm_script (str or GCOMMScript): path to gcomm script file or GCOMMScript object
     """
@@ -109,7 +108,7 @@ def run(args):
     else:
         packet_gen = file_packet_generator(args.script)
         loop.run_until_complete(
-            udp_echo_client(args.host, args.port, loop, packet_gen)
+            client(args.host, args.port, packet_gen)
         )
 
 # def shell(args):
