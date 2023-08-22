@@ -140,7 +140,27 @@ Run the client and send GCOMM commands from file.  See `rosen -h` for host/port 
 There is also a test server that responds with GCOMM `OK` packets to everything
 
     $ rosen server
-
+    
 ## Running Tests
 
     $ pytest rosen
+
+## Usage
+
+``` python
+[evan@blackbox ~] rosen -h 
+usage: rosen [-h] [--debug] [--host HOST] [--port PORT] {run,server} ...
+
+SEAQUE ground station
+
+commands:
+  {run,server}
+    run         run a GCOMM script file
+    server      run a test echo server
+
+options:
+  -h, --help    show this help message and exit
+  --debug       enable debugging
+  --host HOST   SEAQUE host
+  --port PORT   SEAQUE port
+```
