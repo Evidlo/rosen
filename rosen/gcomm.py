@@ -265,4 +265,6 @@ class GCOMMScript(Script):
     @classmethod
     def load(cls, filename):
         with open(filename, 'rb') as f:
-            return pickle.load(f)
+            o = pickle.load(f)
+            assert type(o) is GCOMMScript, "Invalid GCOMM script file"
+            return o
