@@ -32,6 +32,8 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
     # get first packet to send
     packet = next(packet_gen)
 
+    log.debug(packet)
+
     # packet = yield
     while True:
         log.debug(f"Sending {packet}")
@@ -75,6 +77,8 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
     writer.close()
     await writer.wait_closed()
 
+# ----- Script Running -----
+
 def file_packet_generator(gcomm_script):
     """Packet generator from file or GCOMMScript
 
@@ -90,13 +94,6 @@ def file_packet_generator(gcomm_script):
     for packet in script:
         yield packet
 
-# def shell_packet_generator():
-#     """Packet generator from user input"""
-#     # set addr command here
-#     while True:
-#         packet = input("Packet:").encode('utf8')
-#         yield packet
-
 def run(args):
     """Run a GCOMM script file"""
     loop = asyncio.get_event_loop()
@@ -109,11 +106,51 @@ def run(args):
     else:
         packet_gen = file_packet_generator(args.script)
         loop.run_until_complete(
-            udp_echo_client(args.host, args.port, loop, packet_gen)
+            client(args.host, args.port, packet_gen)
         )
 
-# def shell(args):
-#     """Run GCOMM commands interactively"""
-#     loop = asyncio.new_event_loop()
-#     packet_gen = shell_packet_generator()
-#     loop.run_until_complete(udp_echo_client(args.host, args.port, loop, packet_gen))
+# ----- Interactive Shell -----
+
+async def interactive_shell(q):
+    """
+    Shell coroutine which has access to the queue
+
+    Args:
+        q (Queue): queue for sending data to packet generator
+    """
+    def repl_config(repl):
+        repl.show_status_bar = False
+        repl.confirm_exit = False
+        repl.editing_mode = EditingMode.VI
+
+    def send(msg):
+        q.put_nowait(msg)
+
+    print('Use send(...) to send GCOMM objects')
+    await embed(
+        globals=globals(),
+        locals=locals(),
+        return_asyncio_coroutine=True,
+        patch_stdout=True,
+        configure=repl_config
+    )
+    loop.stop()
+
+
+def shell_packet_generator(q):
+    """Packet generator from user input
+
+    Args:
+        q (Queue): queue for receiving data from shell
+    """
+    # set addr command here
+    while True:
+        yield q.get()
+
+def shell(args):
+    """Run GCOMM commands interactively"""
+    loop = asyncio.new_event_loop()
+    q = asyncio.Queue()
+    packet_gen = shell_packet_generator(q)
+    asyncio.ensure_future(interactive_shell(q))
+    loop.run_until_complete(client(args.host, args.port, packet_gen))
