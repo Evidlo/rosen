@@ -4,10 +4,13 @@ import asyncio
 import pickle
 import time
 import logging
+from pathlib import Path
 
 from rosen.gcomm import GCOMMScript, GCOMM
+from rosen.icomm import ICOMMScript, ICOMM
+from rosen.axe import AXE
 
-logging.basicConfig(format='%(asctime)s line %(lineno)d: %(message)s')
+logging.basicConfig(format='%(message)s')
 log = logging.getLogger('rosen')
 
 async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
@@ -30,9 +33,7 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
     # set up log
     gcomm_log_f = open(gcomm_log, 'wb')
     # get first packet to send
-    packet = next(packet_gen)
-
-    log.debug(packet)
+    packet = await anext(packet_gen)
 
     # packet = yield
     while True:
@@ -44,18 +45,21 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
             await writer.drain()
 
             async with asyncio.timeout(ack_time):
+
                 # wait to receive an ACK, continue receiving in the meantime
                 while True:
                     data = await reader.readexactly(GCOMM.size)
                     g = GCOMM.parse(data)
+                    print(f"Received {g}")
                     if g.cmd == 'ok':
                         # we received the ack
-                        log.debug("ACK received")
-                        packet = next(packet_gen)
-                        # packet = yield
+                        print("ACK received")
                         break
                     else:
                         gcomm_log_f.write(data)
+
+            packet = await anext(packet_gen)
+
         except TimeoutError:
             # ACK has timed out
             log.error("ACK timeout")
@@ -72,6 +76,9 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
         except asyncio.exceptions.IncompleteReadError:
             print("EOF before complete GCOMM packet")
             break
+        except AttributeError:
+            log.error("Cannot send packet.  Not a GCOMM packet")
+            packet = await anext(packet_gen)
 
     gcomm_log_f.close()
     writer.close()
@@ -79,7 +86,7 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
 
 # ----- Script Running -----
 
-def file_packet_generator(gcomm_script):
+async def file_packet_generator(gcomm_script):
     """Packet generator from file or GCOMMScript
 
     Args:
@@ -111,13 +118,20 @@ def run(args):
 
 # ----- Interactive Shell -----
 
-async def interactive_shell(q):
+async def interactive_shell(q, script, loop):
     """
     Shell coroutine which has access to the queue
 
     Args:
         q (Queue): queue for sending data to packet generator
+        script (str): path to Python script containing user
+            defined variables
+        loop (asyncio loop): kill the asyncio loop when the shell completes
     """
+
+    from ptpython.repl import embed
+    from prompt_toolkit.enums import EditingMode
+
     def repl_config(repl):
         repl.show_status_bar = False
         repl.confirm_exit = False
@@ -126,7 +140,9 @@ async def interactive_shell(q):
     def send(msg):
         q.put_nowait(msg)
 
-    print('Use send(...) to send GCOMM objects')
+    exec(Path(script).read_text())
+
+    print('Use send(...) to stick things in the queue')
     await embed(
         globals=globals(),
         locals=locals(),
@@ -137,7 +153,7 @@ async def interactive_shell(q):
     loop.stop()
 
 
-def shell_packet_generator(q):
+async def shell_packet_generator(q):
     """Packet generator from user input
 
     Args:
@@ -145,12 +161,24 @@ def shell_packet_generator(q):
     """
     # set addr command here
     while True:
-        yield q.get()
+        yield await q.get()
 
 def shell(args):
     """Run GCOMM commands interactively"""
-    loop = asyncio.new_event_loop()
+
+    loop = asyncio.get_event_loop()
     q = asyncio.Queue()
+    asyncio.ensure_future(interactive_shell(q, args.script, loop))
     packet_gen = shell_packet_generator(q)
-    asyncio.ensure_future(interactive_shell(q))
-    loop.run_until_complete(client(args.host, args.port, packet_gen))
+    # loop.run_until_complete(client(args.host, args.port, packet_gen))
+    asyncio.ensure_future(client(args.host, args.port, packet_gen))
+
+    loop.run_forever()
+    loop.close()
+
+    # q = asyncio.Queue()
+    # # asyncio.ensure_future(print_counter(q))
+    # asyncio.ensure_future(interactive_shell(q))
+
+    # loop.run_forever()
+    # loop.close()

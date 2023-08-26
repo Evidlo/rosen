@@ -13,11 +13,10 @@ async def handle_client(reader, writer):
         except ConnectionResetError:
             print("Client disconnected in middle of message")
             break
-        # reponse with ack before echoing
+        # respond with OK
         writer.write(GCOMM('ok').build())
-        # writer.write(data)
         await writer.drain()
-        # slow the server down a bit
+        # artificially slow the server down a bit
         await asyncio.sleep(0.3)
 
     print(f"Shutting down server")
@@ -29,45 +28,7 @@ async def run_server(host, port):
         await server.serve_forever()
 
 def server(args):
+    """Run a test server which simply responds to OK to all valid packets"""
     # asyncio.run(run_server(args.host, args.port))
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_server(args.host, args.port))
-
-
-
-# import socket
-# def server(args):
-#     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#     sock.bind((args.host, args.port))
-#     sock.setblocking(True)
-#     print(f"Serving on {args.host} {args.port}")
-#     sock.listen()
-#     conn, remote_addr = sock.accept()
-#     while True:
-#         data = conn.recv(GCOMM.size)
-#         g = GCOMM.parse(data)
-#         print(f"Received from {remote_addr}:\n    {g}")
-#         # reponse with ack before echoing
-#         conn.send(GCOMM('ok').build())
-#         conn.send(data)
-
-# import curio
-# async def handle_connection(client, remote_addr):
-#     async with client.as_stream() as s:
-#         while True:
-#             try:
-#                 data = await s.read_exactly(GCOMM.size)
-#                 g = GCOMM.parse(data)
-#             except EOFError:
-#                 break
-#             except ConnectionResetError:
-#                 print("Client disconnected in middle of message")
-#                 break
-#             print(f"Received from {remote_addr}:\n    {g}")
-#             # reponse with ack before echoing
-#             await s.write(GCOMM('ok').build())
-#             await s.write(data)
-#     print('Connection closed')
-
-# def server(args):
-#     curio.run(curio.tcp_server, args.host, args.port, handle_connection)
