@@ -28,6 +28,7 @@ def main():
     run_parser.set_defaults(func=run)
 
     shell_parser = subparsers.add_parser('shell', help="run GCOMM commands interactively")
+    shell_parser.add_argument('script', metavar='PATH', type=str, default=None, help='Optional Python script containing variables to be made available in the shell')
     shell_parser.set_defaults(func=shell)
 
     server_parser = subparsers.add_parser('server', help="run a test echo server")
