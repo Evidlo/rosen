@@ -43,7 +43,7 @@ for i in range(100):
 
 g = GCOMMScript()
 # upload and schedule the ICOMM script above to run at specific time
-g.schedule_script(0, s1)
+g.schedule_script('2024-06-01', s1)
 # upload the script to a file on the SD card
 g.upload_script('testfile', s2)
 # also can send other GCOMM commands here
