@@ -15,7 +15,7 @@ setup(
     name="rosen",
     version=version["__version__"],
     license="GPL3",
-    description="Example python project",
+    description="Rosen ground software for SEAQUE mission",
     long_description=README,
     long_description_content_type='text/markdown',
     author="Evan Widloski",
@@ -23,14 +23,13 @@ setup(
     url="https://github.com/evidlo/rosen",
     # your project's pip dependencies
     install_requires=[
-        "asyncio-dgram==2.1.2",
-        "construct==2.10.68",
-        "rich==13.3.2",
-        "python-dateutil==2.8.2",
-        # FIXME: construct hasn't pushed newest updates to pypi
-        # we install from the git repo to get them
-        "construct@git+https://github.com/construct/construct#35cfad42bbc392a4c2946195036418846736ed11",
-        "msgpack==1.0.5"
+        "asyncio-dgram",
+        "construct",
+        "rich",
+        "python-dateutil",
+        "construct",
+        "msgpack",
+        "ptpython"
     ],
     include_package_data=True,
     # automatically look for subfolders with __init__.py

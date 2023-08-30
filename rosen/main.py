@@ -3,7 +3,7 @@
 import argparse
 import logging
 
-from rosen.client import run
+from rosen.client import run, shell
 from rosen.server import server
 
 logging.basicConfig(format='%(asctime)s line %(lineno)d: %(message)s')
@@ -27,8 +27,9 @@ def main():
     run_parser.add_argument('script', nargs='?', metavar='PATH', type=str, default='gcomm.script', help="script path")
     run_parser.set_defaults(func=run)
 
-    # shell_parser = subparsers.add_parser('shell', help="run GCOMM commands interactively")
-    # shell_parser.set_defaults(func=shell)
+    shell_parser = subparsers.add_parser('shell', help="run GCOMM commands interactively")
+    shell_parser.add_argument('script', metavar='PATH', type=str, default=None, help='Optional Python script containing variables to be made available in the shell')
+    shell_parser.set_defaults(func=shell)
 
     server_parser = subparsers.add_parser('server', help="run a test echo server")
     server_parser.set_defaults(func=server)

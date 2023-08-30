@@ -1,6 +1,6 @@
 # Groundstation
 
-This repo contains the ground station software to be run on a Nanoracks ground station machine for communicating with SEAQUE as well as functions for generating scripts to send to the ground station.
+This repo contains the ground station software to be run on a ground station machine for communicating with SEAQUE as well as functions for generating scripts to send to the ground station.
 
     pip install -e .
     
@@ -50,7 +50,7 @@ g.upload_script('testfile', s2)
 g.reset_radcom()
 g.exec_file('testfile')
 
-# save GCOMM script to file to be sent to Nanoracks
+# save GCOMM script to file to be sent
 g.save('myscript.pkl')
 ```
 
@@ -140,7 +140,27 @@ Run the client and send GCOMM commands from file.  See `rosen -h` for host/port 
 There is also a test server that responds with GCOMM `OK` packets to everything
 
     $ rosen server
-
+    
 ## Running Tests
 
     $ pytest rosen
+
+## Usage
+
+``` python
+[evan@blackbox ~] rosen -h 
+usage: rosen [-h] [--debug] [--host HOST] [--port PORT] {run,server} ...
+
+SEAQUE ground station
+
+commands:
+  {run,server}
+    run         run a GCOMM script file
+    server      run a test echo server
+
+options:
+  -h, --help    show this help message and exit
+  --debug       enable debugging
+  --host HOST   SEAQUE host
+  --port PORT   SEAQUE port
+```
