@@ -22,9 +22,9 @@ def test_axe_parsebuild():
 
 def test_icomm():
     # manually build an ICOMM packet and parse it
-    b = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar')).build()
+    b = ICOMM('cmd', 'dcm', payload=AXE('execute', 'foobar')).build()
     i = ICOMM.parse(b)
-    assert i.cmd == 'route'
+    assert i.cmd == 'cmd'
     assert type(i.payload) is AXE
     assert i.payload.cmd == 'execute'
 
@@ -46,8 +46,8 @@ def test_icommscript():
     assert i_scr.script[1][0] > i_scr.script[0][0]
     # check ICOMM packet N and M
     for n, (offset, i) in enumerate(i_scr):
-        assert i.n == n, "Incorrect ICOMM N field"
-        assert i.m == len(i_scr.script), "Incorrect ICOMM M field"
+        assert i.n == 0, "Incorrect ICOMM N field"
+        assert i.m == 0, "Incorrect ICOMM M field"
 
     try:
         str(i_scr)
@@ -58,7 +58,7 @@ def test_icommscript():
 
 def test_gcomm():
     # manually build a gcomm packet and parse it
-    i = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
+    i = ICOMM('cmd', 'dcm', AXE('execute', 'foobar'))
     g = GCOMM(
         'exec_now', filename='foobar.txt', n=0, m=100, offset=1234567890,
         addr='0.0.0.0', time=1234567890, errcode=1, errstr='this is an err', packet=i
@@ -80,12 +80,12 @@ def test_gcomm():
 def test_gcommscript_commands():
     # build a basic GCOMM script
     g_scr = GCOMMScript()
-    i = ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
+    i = ICOMM('cmd', 'dcm', payload=AXE('execute', 'foobar'))
     g_scr.exec_now(i)
     g_scr.abort_script()
     g_scr.app_file(
         'foo.txt', 5, 100, 1234567890,
-        ICOMM('route', 'ground', 'dcm', 0, 0, AXE('execute', 'foobar'))
+        ICOMM('cmd', 'dcm', payload=AXE('execute', 'foobar'))
     )
     assert g_scr.script[-1].n == 5, "Incorrect GCOMM N field"
     assert g_scr.script[-1].m == 100, "Incorrect GCOMM N field"
