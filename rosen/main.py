@@ -18,8 +18,12 @@ def main():
 
     # program arguments
     parser.add_argument('--debug', action='store_true', default=False, help="enable debugging")
-    parser.add_argument('--host', metavar='HOST', default='127.0.0.1', type=str, help="SEAQUE host")
-    parser.add_argument('--port', metavar='PORT', default=8000, type=int, help="SEAQUE port")
+    # parser.add_argument('--host', metavar='HOST', default='127.0.0.1', type=str, help="SEAQUE host")
+    # parser.add_argument('--port', metavar='PORT', default=8000, type=int, help="SEAQUE port")
+
+    # TODO: Can change the default back to above, this is just to make it easier for testing
+    parser.add_argument('--host', metavar='HOST', default='192.168.197.2', type=str, help="SEAQUE host")
+    parser.add_argument('--port', metavar='PORT', default=10888, type=int, help="SEAQUE port")
 
     # subparser for `run` command
     run_parser = subparsers.add_parser('run', help="run a GCOMM script file")
@@ -28,7 +32,7 @@ def main():
     run_parser.set_defaults(func=run)
 
     shell_parser = subparsers.add_parser('shell', help="run GCOMM commands interactively")
-    shell_parser.add_argument('script', metavar='PATH', type=str, default=None, help='Optional Python script containing variables to be made available in the shell')
+    shell_parser.add_argument('--script', metavar='PATH', type=str, default=None, help='Optional Python script containing variables to be made available in the shell')
     shell_parser.set_defaults(func=shell)
 
     server_parser = subparsers.add_parser('server', help="run a test echo server")
