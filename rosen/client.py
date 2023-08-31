@@ -159,9 +159,11 @@ async def interactive_shell(q, script, loop):
     def send(msg):
         q.put_nowait(msg)
 
-    exec(Path(script).read_text())
+    if script is not None:
+        exec(Path(script).read_text())
 
-    print('Use send() t')
+    print('Use send() to stick things in the queue')
+    print('CTRL+D to quit the shell')
     await embed(
         globals=globals(),
         locals=locals(),
