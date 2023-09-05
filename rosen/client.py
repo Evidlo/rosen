@@ -55,6 +55,7 @@ async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
     # open connection
     try:
         reader, writer = await asyncio.open_connection(host, port)
+        print("Connected")
     except ConnectionRefusedError:
         log.error("Connection refused")
         await asyncio.sleep(1)
@@ -137,7 +138,7 @@ def run(args):
 
 # ----- Interactive Shell -----
 
-async def interactive_shell(q, script, loop):
+async def interactive_shell(q, script, loop, args, packet_gen):
     """
     Shell coroutine which has access to the queue
 
@@ -189,7 +190,6 @@ def shell(args):
 
     loop = asyncio.get_event_loop()
     q = asyncio.Queue()
-    asyncio.ensure_future(interactive_shell(q, args.script, loop))
     packet_gen = shell_packet_generator(q)
     # loop.run_until_complete(client(args.host, args.port, packet_gen))
     asyncio.ensure_future(client(args.host, args.port, packet_gen))
