@@ -42,7 +42,36 @@ async def wait_for_ok(reader, gcomm_log_f):
             gcomm_log_f.write(data)
 
 
-async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
+
+# FIXME: python3.7 - this can be simplified if we drop 3.7
+# python3.7 doesn't have anext.  copy it from
+# https://github.com/python/cpython/pull/8895/files#diff-2ea92c5fc4c308512ab17f95ccd627a366fbe9d83a618e4f87c1de494117e406R442-R458
+async def anext(async_iterator):
+    """Return the next item from the async iterator.
+    """
+    from collections.abc import AsyncIterator
+    if not isinstance(async_iterator, AsyncIterator):
+        raise TypeError(f'anext expected an AsyncIterator, got {type(async_iterator)}')
+    anxt = type(async_iterator).__anext__
+    return await anxt(async_iterator)
+
+# FIXME: python3.7 - this can be simplified if we drop 3.7
+# python3.7 asyncio doesn't support timeout context manager.  use asyncio.wait_for() instead
+async def wait_for_ok(reader, gcomm_log_f):
+    """Loop forever until we receive an OK.  Write received messages to log in meantime"""
+    while True:
+        data = await reader.readexactly(GCOMM.size)
+        g = GCOMM.parse(data)
+        print(f"Received {g}")
+        if g.cmd == 'ok':
+            # we received the ack
+            print("ACK received")
+            return
+        else:
+            gcomm_log_f.write(data)
+
+
+async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
     """Connect to SEAQUE over UDP and start sending up GCOMM packets
 
     Args:
