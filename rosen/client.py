@@ -13,6 +13,35 @@ from rosen.axe import AXE
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('rosen')
 
+
+# FIXME: python3.7 - this can be simplified if we drop 3.7
+# python3.7 doesn't have anext.  copy it from
+# https://github.com/python/cpython/pull/8895/files#diff-2ea92c5fc4c308512ab17f95ccd627a366fbe9d83a618e4f87c1de494117e406R442-R458
+async def anext(async_iterator):
+    """Return the next item from the async iterator.
+    """
+    from collections.abc import AsyncIterator
+    if not isinstance(async_iterator, AsyncIterator):
+        raise TypeError(f'anext expected an AsyncIterator, got {type(async_iterator)}')
+    anxt = type(async_iterator).__anext__
+    return await anxt(async_iterator)
+
+# FIXME: python3.7 - this can be simplified if we drop 3.7
+# python3.7 asyncio doesn't support timeout context manager.  use asyncio.wait_for() instead
+async def wait_for_ok(reader, gcomm_log_f):
+    """Loop forever until we receive an OK.  Write received messages to log in meantime"""
+    while True:
+        data = await reader.readexactly(GCOMM.size)
+        g = GCOMM.parse(data)
+        print(f"Received {g}")
+        if g.cmd == 'ok':
+            # we received the ack
+            print("ACK received")
+            return
+        else:
+            gcomm_log_f.write(data)
+
+
 async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
     """Connect to SEAQUE over UDP and start sending up GCOMM packets
 
@@ -44,47 +73,38 @@ async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
             writer.write(packet.build())
             await writer.drain()
 
-            async with asyncio.timeout(ack_time):
-
-                # wait to receive an ACK, continue receiving in the meantime
-                while True:
-                    data = await reader.readexactly(GCOMM.size)
-                    g = GCOMM.parse(data)
-                    print(f"Received {g}")
-                    if g.cmd == 'ok':
-                        # we received the ack
-                        print("ACK received")
-                        break
-                    else:
-                        gcomm_log_f.write(data)
+            # FIXME: python3.7 - this can be simplified if we drop 3.7
+            # wait to receive an ACK, continue receiving in the meantime
+            await asyncio.wait_for(wait_for_ok(reader, gcomm_log_f), timeout=ack_time)
 
             packet = await anext(packet_gen)
 
-        except TimeoutError:
+        except asyncio.TimeoutError:
             # ACK has timed out
-            log.error("ACK timeout")
+            log.error("Didn't receive OK from RADCOM")
             break
         except ConnectionResetError:
             # lost UDP connection
             log.error("Lost connection")
             await asyncio.sleep(1)
             break
-        except StopIteration:
+        except (StopAsyncIteration, StopIteration):
             # packet generator is finished.  exit loop
-            log.error("Packet generator StopIteration")
+            log.debug("Packet generator StopIteration")
             break
         except asyncio.exceptions.IncompleteReadError:
             print("EOF before complete GCOMM packet")
             break
         except AttributeError:
             log.error("Cannot send packet.  Not a GCOMM packet")
-            packet = await anext(packet_gen)
+            # packet = await anext(packet_gen)
+            packet = await type(packet_gen).__anext__(packet_gen)
 
     gcomm_log_f.close()
     writer.close()
     await writer.wait_closed()
 
-# ----- Script Running -----
+# ----- Manual Script Running -----
 
 async def file_packet_generator(gcomm_script):
     """Packet generator from file or GCOMMScript
@@ -141,7 +161,7 @@ async def interactive_shell(q, script, loop):
 
     exec(Path(script).read_text())
 
-    print('Use send(...) to stick things in the queue')
+    print('Use send() t')
     await embed(
         globals=globals(),
         locals=locals(),
@@ -173,11 +193,3 @@ def shell(args):
     asyncio.ensure_future(client(args.host, args.port, packet_gen))
 
     loop.run_forever()
-    loop.close()
-
-    # q = asyncio.Queue()
-    # # asyncio.ensure_future(print_counter(q))
-    # asyncio.ensure_future(interactive_shell(q))
-
-    # loop.run_forever()
-    # loop.close()
