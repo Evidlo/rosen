@@ -71,7 +71,7 @@ async def wait_for_ok(reader, gcomm_log_f):
             gcomm_log_f.write(data)
 
 
-async def client(host, port, packet_gen, ack_time=2, gcomm_log='gcomm.log'):
+async def client(host, port, packet_gen, ack_time=4, gcomm_log='gcomm.log'):
     """Connect to SEAQUE over UDP and start sending up GCOMM packets
 
     Args:
