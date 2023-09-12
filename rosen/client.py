@@ -92,7 +92,7 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
             # packet generator is finished.  exit loop
             log.debug("Packet generator StopIteration")
             break
-        except asyncio.exceptions.IncompleteReadError:
+        except asyncio.IncompleteReadError:
             print("EOF before complete GCOMM packet")
             break
         except AttributeError:
