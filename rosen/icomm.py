@@ -67,7 +67,7 @@ class ICOMM(Packet):
     payload: AXE
     frm: str = 'ground'
     n: int = 0
-    m: int|MutInt = 0
+    m: int = 0
 
     size = icomm_construct.sizeof()
 
