@@ -43,7 +43,7 @@ async def wait_for_ok(reader, gcomm_log_f):
 
 
 async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
-    """Connect to SEAQUE over UDP and start sending up GCOMM packets
+    """Connect to SEAQUE over TCP and start sending up GCOMM packets
 
     Args:
         host (str): SEAQUE address
@@ -84,7 +84,7 @@ async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
             log.error("Didn't receive OK from RADCOM")
             break
         except ConnectionResetError:
-            # lost UDP connection
+            # lost TCP connection
             log.error("Lost connection")
             await asyncio.sleep(1)
             break
