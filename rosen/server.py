@@ -28,7 +28,7 @@ async def run_server(host, port):
         await server.serve_forever()
 
 def server(args):
-    """Run a test server which simply responds to OK to all valid packets"""
+    """Run a test server which simply responds OK to all valid packets"""
     # asyncio.run(run_server(args.host, args.port))
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_server(args.host, args.port))
