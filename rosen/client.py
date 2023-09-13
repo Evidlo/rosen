@@ -32,6 +32,8 @@ async def wait_for_ok(reader, gcomm_log_f):
     """Loop forever until we receive an OK.  Write received messages to log in meantime"""
     while True:
         data = await reader.readexactly(GCOMM.size)
+        with open('/tmp/gcomm', 'wb') as f:
+            f.write(data)
         g = GCOMM.parse(data)
         print(f"Received {g}")
         if g.cmd == 'ok':

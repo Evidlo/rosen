@@ -3,7 +3,7 @@
 from construct import (
     Checksum, Struct, Int8ub, Int16ub, ExprAdapter, this, Byte, GreedyBytes,
     Mapping, Prefixed, Bytes, CString,
-    VarInt, RawCopy, Probe, Padded
+    VarInt, RawCopy, Probe, Padded, If
 )
 from dataclasses import dataclass
 from msgpack import packb, unpackb
@@ -131,7 +131,8 @@ icomm_construct = Padded(
             "seq" / Int8ub,
             "n" / Int8ub,
             "m" / Int8ub,
-            "payload" / Bytes(this.size),
+            # "payload" / Bytes(this.size),
+            "payload" / If(lambda ctx: ctx.cmd != 'ack', Bytes(this.size)),
         )),
         "checksum" / Checksum(
             Bytes(4),
@@ -146,7 +147,7 @@ class ICOMM(Packet):
     """Class for building/parsing ICOMM packet"""
     cmd: str
     to: str
-    payload: AXE
+    payload: AXE = None
     frm: str = 'ground'
     n: int = 0
     m: int = 0
@@ -159,7 +160,10 @@ class ICOMM(Packet):
         Returns:
             bytes
         """
-        axe_bytes = self.payload.build()
+        if self.payload is None:
+            axe_bytes = b''
+        else:
+            axe_bytes = self.payload.build()
         return icomm_construct.build({'body':{'value':
             {
                 'size': len(axe_bytes), 'cmd':self.cmd, 'to':self.to, 'frm':self.frm,
@@ -171,10 +175,13 @@ class ICOMM(Packet):
     def parse(cls, raw_bytes):
         parsed = icomm_construct.parse(raw_bytes)
         return cls(
-            parsed.body.value.cmd, parsed.body.value.to,
-            AXE.parse(parsed.body.value.payload), parsed.body.value.frm,
-            parsed.body.value.n, parsed.body.value.m,
-                    )
+            parsed.body.value.cmd,
+            parsed.body.value.to,
+            None if parsed.body.value.payload is None else AXE.parse(parsed.body.value.payload),
+            parsed.body.value.frm,
+            parsed.body.value.n,
+            parsed.body.value.m,
+        )
 
 
 # ----- Scripting -----
