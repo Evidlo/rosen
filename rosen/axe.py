@@ -19,7 +19,7 @@ axe = Struct(
             'statement': ord('.')
         }
     ),
-    "tx_id" / If(this.cmd == 'query' or this.cmd == 'statement', Int16ub),
+    "tx_id" / If(lambda ctx: (ctx.cmd == 'query' or ctx.cmd == 'statement'), Int16ub),
     # msgpack pack/unpack data
     "data" / ExprAdapter(GreedyBytes, lambda b, _: unpackb(b), lambda b, _: packb(b, use_single_float=True))
 )
