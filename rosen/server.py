@@ -18,6 +18,10 @@ async def handle_client(reader, writer):
         await writer.drain()
         # artificially slow the server down a bit
         await asyncio.sleep(0.3)
+        writer.write(GCOMM('list_sd').build())
+        await asyncio.sleep(1)
+        writer.write(GCOMM('list_sd').build())
+        await asyncio.sleep(1)
 
     print(f"Shutting down server")
 

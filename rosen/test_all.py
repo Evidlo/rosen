@@ -58,7 +58,7 @@ def test_icommscript():
 
 def test_gcomm():
     # manually build a gcomm packet and parse it
-    i = ICOMM('cmd', 'dcm', AXE('execute', 'foobar'))
+    i = ICOMM('cmd', 'dcm', payload=AXE('execute', 'foobar'))
     g = GCOMM(
         'exec_now', filename='foobar.txt', n=0, m=100, offset=1234567890,
         addr='0.0.0.0', time=1234567890, errcode=1, errstr='this is an err', packet=i

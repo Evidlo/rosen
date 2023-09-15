@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 import asyncio
-import pickle
-import time
 import logging
 from pathlib import Path
+import sys
 
 from rosen.gcomm import GCOMMScript, GCOMM
 from rosen.icomm import ICOMMScript, ICOMM
@@ -13,157 +12,105 @@ from rosen.axe import AXE
 logging.basicConfig(format='%(message)s')
 log = logging.getLogger('rosen')
 
-
-# FIXME: python3.7 - this can be simplified if we drop 3.7
-# python3.7 doesn't have anext.  copy it from
-# https://github.com/python/cpython/pull/8895/files#diff-2ea92c5fc4c308512ab17f95ccd627a366fbe9d83a618e4f87c1de494117e406R442-R458
-async def anext(async_iterator):
-    """Return the next item from the async iterator.
-    """
-    from collections.abc import AsyncIterator
-    if not isinstance(async_iterator, AsyncIterator):
-        raise TypeError(f'anext expected an AsyncIterator, got {type(async_iterator)}')
-    anxt = type(async_iterator).__anext__
-    return await anxt(async_iterator)
-
-# FIXME: python3.7 - this can be simplified if we drop 3.7
-# python3.7 asyncio doesn't support timeout context manager.  use asyncio.wait_for() instead
-async def wait_for_ok(reader, gcomm_log_f):
-    """Loop forever until we receive an OK.  Write received messages to log in meantime"""
-    while True:
-        data = await reader.readexactly(GCOMM.size)
-        with open('/tmp/gcomm', 'wb') as f:
-            f.write(data)
-        g = GCOMM.parse(data)
-        print(f"Received {g}")
-        if g.cmd == 'ok':
-            # we received the ack
-            print("ACK received")
-            return
-        else:
-            gcomm_log_f.write(data)
-
-
-async def client(host, port, packet_gen, ack_time=1, gcomm_log='gcomm.log'):
-    """Connect to SEAQUE over TCP and start sending up GCOMM packets
+class RADCOM:
+    """Class for holding state communicating with RADCOM
 
     Args:
-        host (str): SEAQUE address
-        port (int): SEAQUE port
-        packet_gen (generator): generator that generates gcomm packets
-        ack_time (float): maximum time to receive an ACK before timeout
-        gcomm_log (str): ouput log containing all sent/received GCOMM packets
+        host (str): RADCOM address
+        port (int): RADCOM port
+
+    Attributes:
+        ok_received (asyncio.Event): whether an OK has been received for the last
+            message sent
+        host (str): RADCOM address
+        port (int): RADCOM port
+        should_quit (bool): set this to True to tell infinite-running `receive`
+            coroutine to quit
+
     """
-    # open connection
-    try:
-        reader, writer = await asyncio.open_connection(host, port)
-    except ConnectionRefusedError:
-        log.error("Connection refused")
-        await asyncio.sleep(1)
-        return
-    # set up log
-    gcomm_log_f = open(gcomm_log, 'wb')
-    # get first packet to send
-    packet = await anext(packet_gen)
+    def __init__(self, host, port):
+        self.host, self.port = host, port
+        self.ok_received = asyncio.Event()
+        self.should_quit = False
 
-    # packet = yield
-    while True:
-        log.debug(f"Sending {packet}")
-
+    async def connect(self):
+        """Open connection to RADCOM"""
         try:
-            # send next packet
-            writer.write(packet.build())
-            await writer.drain()
+            self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+        except ConnectionRefusedError:
+            log.error("Connection refused")
+            sys.exit(1)
 
-            # FIXME: python3.7 - this can be simplified if we drop 3.7
-            # wait to receive an ACK, continue receiving in the meantime
-            await asyncio.wait_for(wait_for_ok(reader, gcomm_log_f), timeout=ack_time)
+    async def close(self):
+        """Clean up connection"""
+        self.writer.close()
+        await writer.wait_closed()
 
-            packet = await anext(packet_gen)
+    async def receive(self):
+        """Forever-running coroutine that logs/prints received packets and checks for OK"""
+        while not self.should_quit:
+            data = await self.reader.readexactly(GCOMM.size)
+            packet = GCOMM.parse(data)
+            print(f"Received {packet}")
+            if packet.cmd == 'ok':
+                self.ok_received.set()
 
+    async def wait_ok(self, timeout=5):
+        """Coroutine which waits for an OK to come through, or times out
+
+        Args:
+            timeout (float): max time to wait for an OK
+
+        Returns:
+            bool: whether an OK was received within the timeout period
+        """
+        try:
+            await asyncio.wait_for(self.ok_received.wait(), timeout=timeout)
         except asyncio.TimeoutError:
-            # ACK has timed out
-            log.error("Didn't receive OK from RADCOM")
-            break
-        except ConnectionResetError:
-            # lost TCP connection
-            log.error("Lost connection")
-            await asyncio.sleep(1)
-            break
-        except (StopAsyncIteration, StopIteration):
-            # packet generator is finished.  exit loop
-            log.debug("Packet generator StopIteration")
-            break
-        except asyncio.IncompleteReadError:
-            print("EOF before complete GCOMM packet")
-            break
-        except AttributeError:
-            log.error("Cannot send packet.  Not a GCOMM packet")
-            # packet = await anext(packet_gen)
-            packet = await type(packet_gen).__anext__(packet_gen)
+            log.error("OK timed out")
+            return False
+        return True
 
-    gcomm_log_f.close()
-    writer.close()
-    await writer.wait_closed()
+    async def send(self, packet):
+        """Send a packet to GCOMM
 
-# ----- Manual Script Running -----
-
-async def file_packet_generator(gcomm_script):
-    """Packet generator from file or GCOMMScript
-
-    Args:
-        gcomm_script (str or GCOMMScript): path to gcomm script file or GCOMMScript object
-    """
-    # set addr command here
-    # read gcomm script file
-    if type(gcomm_script) is str:
-        script = GCOMMScript.load(gcomm_script)
-    else:
-        script = gcomm_script
-    for packet in script:
-        yield packet
-
-def run(args):
-    """Run a GCOMM script file"""
-    loop = asyncio.get_event_loop()
-    if args.loop:
-        while True:
-            packet_gen = file_packet_generator(args.script)
-            loop.run_until_complete(
-                client(args.host, args.port, packet_gen)
-            )
-    else:
-        packet_gen = file_packet_generator(args.script)
-        loop.run_until_complete(
-            client(args.host, args.port, packet_gen)
-        )
+        Args:
+            packet (GCOMM): GCOMM packet to send
+        """
+        self.writer.write(packet.build())
+        await self.writer.drain()
+        # waiting for an OK
+        self.ok_received.clear()
 
 # ----- Interactive Shell -----
 
-async def interactive_shell(q, script, loop):
+async def shell_client(r, helper, loop):
     """
-    Shell coroutine which has access to the queue
+    Shell coroutine
 
     Args:
-        q (Queue): queue for sending data to packet generator
-        script (str): path to Python script containing user
-            defined variables
+        r (RADCOM): RADCOM state object
+        helper (str): path to Python script containing user defined functions/variables
         loop (asyncio loop): kill the asyncio loop when the shell completes
     """
 
     from ptpython.repl import embed
     from prompt_toolkit.enums import EditingMode
 
+    await r.connect()
+    # kick off receive coroutine
+    receiving = asyncio.create_task(r.receive())
+
+    def send(command):
+        asyncio.create_task(r.send(command))
+
+    if helper is not None:
+        exec(Path(helper).read_text())
+
     def repl_config(repl):
         repl.show_status_bar = False
         repl.confirm_exit = False
         repl.editing_mode = EditingMode.VI
-
-    def send(msg):
-        q.put_nowait(msg)
-
-    if script is not None:
-        exec(Path(script).read_text())
 
     print('Use send() to stick things in the queue')
     print('CTRL+D to quit the shell')
@@ -174,27 +121,57 @@ async def interactive_shell(q, script, loop):
         patch_stdout=True,
         configure=repl_config
     )
+
+    # tell coroutines to exit, and wait for exit
+    # r.should_quit = True
+    # await receiving
+    # FIXME: r.should_quit doesn't work
+    loop.stop()
+
+def shell(args):
+    """Argparse entry point for `shell` command"""
+    r = RADCOM(args.host, args.port)
+    loop = asyncio.get_event_loop()
+    asyncio.run(shell_client(r, args.script, loop))
+
+# ----- Manual Script Running -----
+
+async def run_client(r, script_file, loop):
+    """
+    Script runner coroutine
+
+    Args:
+        r (RADCOM): RADCOM state object
+        script (str or GCOMMScript): GCOMM script to execute
+        loop (asyncio loop): kill the asyncio loop when the shell completes
+    """
+    await r.connect()
+    # kick off receive coroutine
+    receiving = asyncio.create_task(r.receive())
+
+    if type(script_file) is str:
+        script = GCOMMScript.load(script_file)
+    elif type(script) is GCOMMScript:
+        script = script_file
+    else:
+        raise TypeError("Invalid type for script_file")
+
+    for packet in script:
+        # wait for an OK, resend previous packet if no OK received
+        await r.send(packet)
+        while not await r.wait_ok():
+            await r.send(packet)
+
+    # tell coroutines to exit, and wait for exit
+    # r.should_quit = True
+    # await receiving
+    # FIXME: r.should_quit doesn't work
     loop.stop()
 
 
-async def shell_packet_generator(q):
-    """Packet generator from user input
-
-    Args:
-        q (Queue): queue for receiving data from shell
-    """
-    # set addr command here
-    while True:
-        yield await q.get()
-
-def shell(args):
-    """Run GCOMM commands interactively"""
-
+def run(args):
+    """Argparse entry point for `run` command"""
+    r = RADCOM(args.host, args.port)
+    # FIXME: ugly
     loop = asyncio.get_event_loop()
-    q = asyncio.Queue()
-    asyncio.ensure_future(interactive_shell(q, args.script, loop))
-    packet_gen = shell_packet_generator(q)
-    # loop.run_until_complete(client(args.host, args.port, packet_gen))
-    asyncio.ensure_future(client(args.host, args.port, packet_gen))
-
-    loop.run_forever()
+    asyncio.run(run_client(r, args.script, loop))
