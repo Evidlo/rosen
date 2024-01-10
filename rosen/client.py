@@ -50,12 +50,16 @@ class RADCOM:
         """Forever-running coroutine that logs/prints received packets and checks for OK"""
         while not self.should_quit:
             data = await self.reader.readexactly(GCOMM.size)
-            packet = GCOMM.parse(data)
-            print(f"Received {packet}")
-            if packet.cmd == 'ok':
-                self.ok_received.set()
+            try:
+                packet = GCOMM.parse(data)
+                print(f"Received {packet}")
+                if packet.cmd == 'ok':
+                    self.ok_received.set()
 
-    async def wait_ok(self, timeout=5):
+            except:
+                print('Bad Packet')
+            
+    async def wait_ok(self, timeout=100):
         """Coroutine which waits for an OK to come through, or times out
 
         Args:

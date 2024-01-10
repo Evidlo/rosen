@@ -38,6 +38,9 @@ class AXE:
 
     @classmethod
     def parse(cls, raw_bytes):
-        parsed = axe.parse(raw_bytes)
-        return cls(parsed.cmd, parsed.data)
+        try:
+            parsed = axe.parse(raw_bytes)
+            return cls(parsed.cmd, parsed.data)
+        except:
+            return raw_bytes
 

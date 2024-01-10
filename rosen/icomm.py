@@ -173,15 +173,18 @@ class ICOMM(Packet):
 
     @classmethod
     def parse(cls, raw_bytes):
-        parsed = icomm_construct.parse(raw_bytes)
-        return cls(
-            parsed.body.value.cmd,
-            parsed.body.value.to,
-            parsed.body.value.frm,
-            parsed.body.value.n,
-            parsed.body.value.m,
-            None if parsed.body.value.payload is None else AXE.parse(parsed.body.value.payload),
-        )
+        try:
+            parsed = icomm_construct.parse(raw_bytes)
+            return cls(
+                parsed.body.value.cmd,
+                parsed.body.value.to,
+                parsed.body.value.frm,
+                parsed.body.value.n,
+                parsed.body.value.m,
+                None if parsed.body.value.payload is None else AXE.parse(parsed.body.value.payload),
+            )
+        except:
+            return raw_bytes
 
 
 # ----- Scripting -----
