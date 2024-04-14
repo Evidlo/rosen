@@ -30,7 +30,7 @@ class RADCOM:
     """
     def __init__(self, host, port):
         self.host, self.port = host, port
-        self.ok_received = asyncio.Event()
+        self.ok_received = None
         self.should_quit = False
 
     async def connect(self):
@@ -48,6 +48,8 @@ class RADCOM:
 
     async def receive(self):
         """Forever-running coroutine that logs/prints received packets and checks for OK"""
+        if self.ok_received is None:
+            self.ok_received = asyncio.Event()
         while not self.should_quit:
             data = await self.reader.readexactly(GCOMM.size)
             try:
@@ -68,6 +70,8 @@ class RADCOM:
         Returns:
             bool: whether an OK was received within the timeout period
         """
+        if self.ok_received is None:
+            self.ok_received = asyncio.Event()
         try:
             await asyncio.wait_for(self.ok_received.wait(), timeout=timeout)
         except asyncio.TimeoutError:
@@ -84,6 +88,8 @@ class RADCOM:
         self.writer.write(packet.build())
         await self.writer.drain()
         # waiting for an OK
+        if self.ok_received is None:
+            self.ok_received = asyncio.Event()
         self.ok_received.clear()
 
 # ----- Interactive Shell -----
