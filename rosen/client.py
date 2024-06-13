@@ -85,6 +85,7 @@ class RADCOM:
         Args:
             packet (GCOMM): GCOMM packet to send
         """
+        print(f"Sending {packet}")
         self.writer.write(packet.build())
         await self.writer.drain()
         # waiting for an OK
