@@ -22,7 +22,7 @@ def main():
     # parser.add_argument('--port', metavar='PORT', default=8000, type=int, help="SEAQUE port")
 
     # TODO: Can change the default back to above, this is just to make it easier for testing
-    parser.add_argument('--host', metavar='HOST', default='192.168.197.2', type=str, help="SEAQUE host")
+    parser.add_argument('--host', metavar='HOST', default='192.168.215.2', type=str, help="SEAQUE host")
     parser.add_argument('--port', metavar='PORT', default=10888, type=int, help="SEAQUE port")
 
     # subparser for `run` command
