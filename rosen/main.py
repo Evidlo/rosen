@@ -5,6 +5,8 @@ import logging
 
 from rosen.client import run, shell
 from rosen.server import server
+from rosen.tui import tui
+from rosen.down import down_file
 
 logging.basicConfig(format='%(asctime)s line %(lineno)d: %(message)s')
 log = logging.getLogger('rosen')
@@ -37,6 +39,16 @@ def main():
 
     server_parser = subparsers.add_parser('server', help="run a test echo server")
     server_parser.set_defaults(func=server)
+
+    # TUI parser
+    tui_parser = subparsers.add_parser('tui', help='run the rosen interactive TUI')
+    tui_parser.add_argument('--logfile', metavar='PATH', type=str, default=None, help='pkl file to log an array of packets to')
+    tui_parser.set_defaults(func=tui)
+
+    # Download parser
+    down_parser = subparsers.add_parser('download', help='Download a file from SEAQUE')
+    down_parser.add_argument('--downfile', metavar='PATH', type=str, default='down.bin', help='Name of file to download')
+    down_parser.set_defaults(func=down_file)
 
     args = parser.parse_args()
 
